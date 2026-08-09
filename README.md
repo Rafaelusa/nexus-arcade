@@ -99,6 +99,7 @@ O projeto possui **8 tabelas relacionais** modeladas e migradas automaticamente:
 - **Estilização**: CSS Vanilla com Tokens de Design Modernos (Dark Mode / Glassmorphic / Cyberpunk Aesthetic)
 - **State & Async**: RxJS + Angular 21 Signals Reativos
 - **Segurança**: Functional `authInterceptor`, `authGuard` & `roleGuard`
+- **Management UI**: Dashboards de Usuários, Jogos, Upload de ROMs com SHA-256, Capas e Auditoria
 - **Hardware Integration**: Web Gamepad API, IndexedDB
 
 ### Backend
@@ -124,7 +125,7 @@ O projeto possui **8 tabelas relacionais** modeladas e migradas automaticamente:
 ```text
 nexus-arcade/
 ├── apps/
-│   ├── web/                     # Frontend Angular 21 (Shell, Signals, Auth UI, Cyberpunk Layout)
+│   ├── web/                     # Frontend Angular 21 (Library, Admin Dashboards, User Management, ROM Upload UI)
 │   └── api/                     # Backend NestJS API (Auth, Users, Platforms, Games, Storage)
 ├── packages/
 │   └── shared-types/            # Tipos e DTOs compartilhados
@@ -156,8 +157,8 @@ nexus-arcade/
 - 🟢 **[Sprint 4](file:///home/rafael-dev/Projetos%20Pessoais/nexus-arcade/docs/acceptance-criteria/sprint-4.md)**: User Management API & Audit Logs (Admin CRUD & Recovery) (`v0.4.0-sprint4`) — **Concluído**
 - 🟢 **[Sprint 5](file:///home/rafael-dev/Projetos%20Pessoais/nexus-arcade/docs/acceptance-criteria/sprint-5.md)**: Platforms & Games API + Binary ROM Storage Subsystem (`v0.5.0-sprint5`) — **Concluído**
 - 🟢 **[Sprint 6](file:///home/rafael-dev/Projetos%20Pessoais/nexus-arcade/docs/acceptance-criteria/sprint-6.md)**: Frontend Core Shell (Angular 21, Cyberpunk Theme, Auth & RBAC UX) (`v0.6.0-sprint6`) — **Concluído**
-- 🟡 **Sprint 7**: Frontend Library & Admin Dashboards (Management UI) — **Em andamento**
-- ⚪ **Sprint 8**: WebAssembly Emulator Engine (EmulatorJS & ROM Player)
+- 🟢 **[Sprint 7](file:///home/rafael-dev/Projetos%20Pessoais/nexus-arcade/docs/acceptance-criteria/sprint-7.md)**: Frontend Library & Admin Dashboards (Management UI) (`v0.7.0-sprint7`) — **Concluído**
+- 🟡 **Sprint 8**: WebAssembly Emulator Engine (EmulatorJS & ROM Player) — **Em andamento**
 - ⚪ **Sprint 9**: Gamepad API Integration & Save States (Local + Cloud Sync)
 - ⚪ **Sprint 10**: Gamer Statistics Dashboard, Testing Suite & CI/CD Pipeline
 

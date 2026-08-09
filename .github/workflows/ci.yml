@@ -1,0 +1,60 @@
+name: Nexus Arcade CI/CD Pipeline
+
+on:
+  push:
+    branches: [ main ]
+    tags: [ 'v*' ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  build-and-test:
+    name: Build & Automated Tests
+    runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: nexus
+          POSTGRES_PASSWORD: nexuspass
+          POSTGRES_DB: nexus_arcade
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'npm'
+
+      - name: Install Dependencies
+        run: npm ci
+
+      - name: Setup Environment Variables
+        run: |
+          cp .env.example .env
+          echo "DATABASE_URL=postgresql://nexus:nexuspass@localhost:5432/nexus_arcade?schema=public" >> .env
+          echo "JWT_SECRET=super_secret_jwt_key_nexus_arcade_test" >> .env
+          echo "JWT_REFRESH_SECRET=super_secret_refresh_key_nexus_arcade_test" >> .env
+
+      - name: Run Prisma Database Migrations
+        run: npx prisma db push --schema=database/schema.prisma
+
+      - name: Run Database Seed
+        run: node scripts/seed.js
+
+      - name: Run Unit Tests Suite
+        run: npm run test --workspaces
+
+      - name: Build All Workspaces
+        run: npm run build

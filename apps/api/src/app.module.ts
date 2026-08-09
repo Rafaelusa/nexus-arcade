@@ -9,6 +9,7 @@ import { StorageModule } from './storage/storage.module';
 import { PlatformsModule } from './platforms/platforms.module';
 import { GamesModule } from './games/games.module';
 import { SavesModule } from './saves/saves.module';
+import { StatsModule } from './stats/stats.module';
 
 @Module({
   imports: [
@@ -20,6 +21,7 @@ import { SavesModule } from './saves/saves.module';
     PlatformsModule,
     GamesModule,
     SavesModule,
+    StatsModule,
   ],
   controllers: [AppController],
   providers: [AppService],

@@ -49,7 +49,7 @@ npm run start
 | :--- | :--- | :--- |
 | **Frontend Angular** | `http://localhost:4200` | App com Dashboard Cyberpunk / Game Library |
 | **Backend NestJS** | `http://localhost:3000` | API RESTful com RBAC, JWT e File Storage |
-| **API Docs (Swagger)** | `http://localhost:3000/api/docs` | Documentação interativa da API |
+| **API Docs (Swagger)** | `http://localhost:3000/api/docs` | Documentação interativa da API (OpenAPI) |
 | **PostgreSQL Database** | `localhost:5432` | Banco de dados relacional executado no Docker |
 
 ---
@@ -103,8 +103,8 @@ O projeto possui **8 tabelas relacionais** modeladas e migradas automaticamente:
 ### Backend
 - **Framework**: NestJS (TypeScript)
 - **ORM & Database**: Prisma ORM 6 + PostgreSQL 16
-- **Autenticação & Segurança**: JWT (Access/Refresh Tokens), Argon2id Password Hashing, Helmet, Rate Limiting
-- **Documentação**: OpenAPI / Swagger
+- **Autenticação & Segurança**: JWT (Access & Refresh Tokens), Argon2id Password Hashing, Helmet, Rate Limiting
+- **Documentação**: OpenAPI / Swagger UI
 
 ### Emulação & Gaming
 - **Core Engine**: EmulatorJS / RetroArch Cores (WebAssembly)
@@ -123,7 +123,7 @@ O projeto possui **8 tabelas relacionais** modeladas e migradas automaticamente:
 nexus-arcade/
 ├── apps/
 │   ├── web/                     # Frontend Angular 21
-│   └── api/                     # Backend NestJS API
+│   └── api/                     # Backend NestJS API (Auth, RBAC, REST)
 ├── packages/
 │   └── shared-types/            # Tipos e DTOs compartilhados
 ├── database/
@@ -150,8 +150,8 @@ nexus-arcade/
 
 - 🟢 **[Sprint 1](file:///home/rafael-dev/Projetos%20Pessoais/nexus-arcade/docs/acceptance-criteria/sprint-1.md)**: Monorepo Foundation & One-Command Bootstrap (`v0.1.0-sprint1`) — **Concluído**
 - 🟢 **[Sprint 2](file:///home/rafael-dev/Projetos%20Pessoais/nexus-arcade/docs/acceptance-criteria/sprint-2.md)**: Database Layer (PostgreSQL, Prisma ORM, Migrations & Seeds) (`v0.2.0-sprint2`) — **Concluído**
-- 🟡 **Sprint 3**: Backend Auth & Security (NestJS, JWT, Argon2id, RBAC Guards) — **Em andamento**
-- ⚪ **Sprint 4**: User Management API & Audit Logs (Admin CRUD & Recovery)
+- 🟢 **[Sprint 3](file:///home/rafael-dev/Projetos%20Pessoais/nexus-arcade/docs/acceptance-criteria/sprint-3.md)**: Backend Auth & Security (NestJS, JWT, Argon2id, RBAC Guards & Swagger) (`v0.3.0-sprint3`) — **Concluído**
+- 🟡 **Sprint 4**: User Management API & Audit Logs (Admin CRUD & Recovery) — **Em andamento**
 - ⚪ **Sprint 5**: Platforms & Games API + Binary ROM Storage Subsystem
 - ⚪ **Sprint 6**: Frontend Core Shell (Angular 21, Cyberpunk Theme, Auth & RBAC UX)
 - ⚪ **Sprint 7**: Frontend Library & Admin Dashboards (Management UI)

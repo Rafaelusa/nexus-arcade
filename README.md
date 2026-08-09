@@ -56,7 +56,7 @@ npm run start
 
 ## 🛡️ Matriz de Permissões (RBAC)
 
-O sistema possui controle de acesso rigoroso baseado em papéis (*Role-Based Access Control*), validados **sempre no Backend** através de Guards do NestJS (`JwtAuthGuard` + `RolesGuard`):
+O sistema possui controle de acesso rigoroso baseado em papéis (*Role-Based Access Control*), validados **sempre no Backend** através de Guards do NestJS (`JwtAuthGuard` + `RolesGuard`) e no **Frontend** via Angular `roleGuard` & UI adaptativa:
 
 | Recurso / Funcionalidade | GAMER | ADMIN |
 | :--- | :---: | :---: |
@@ -97,7 +97,8 @@ O projeto possui **8 tabelas relacionais** modeladas e migradas automaticamente:
 ### Frontend
 - **Framework**: Angular 21 (Signals, Standalone Components, Control Flow)
 - **Estilização**: CSS Vanilla com Tokens de Design Modernos (Dark Mode / Glassmorphic / Cyberpunk Aesthetic)
-- **State & Async**: RxJS + Angular Signals
+- **State & Async**: RxJS + Angular 21 Signals Reativos
+- **Segurança**: Functional `authInterceptor`, `authGuard` & `roleGuard`
 - **Hardware Integration**: Web Gamepad API, IndexedDB
 
 ### Backend
@@ -123,7 +124,7 @@ O projeto possui **8 tabelas relacionais** modeladas e migradas automaticamente:
 ```text
 nexus-arcade/
 ├── apps/
-│   ├── web/                     # Frontend Angular 21
+│   ├── web/                     # Frontend Angular 21 (Shell, Signals, Auth UI, Cyberpunk Layout)
 │   └── api/                     # Backend NestJS API (Auth, Users, Platforms, Games, Storage)
 ├── packages/
 │   └── shared-types/            # Tipos e DTOs compartilhados
@@ -154,8 +155,8 @@ nexus-arcade/
 - 🟢 **[Sprint 3](file:///home/rafael-dev/Projetos%20Pessoais/nexus-arcade/docs/acceptance-criteria/sprint-3.md)**: Backend Auth & Security (NestJS, JWT, Argon2id, RBAC Guards & Swagger) (`v0.3.0-sprint3`) — **Concluído**
 - 🟢 **[Sprint 4](file:///home/rafael-dev/Projetos%20Pessoais/nexus-arcade/docs/acceptance-criteria/sprint-4.md)**: User Management API & Audit Logs (Admin CRUD & Recovery) (`v0.4.0-sprint4`) — **Concluído**
 - 🟢 **[Sprint 5](file:///home/rafael-dev/Projetos%20Pessoais/nexus-arcade/docs/acceptance-criteria/sprint-5.md)**: Platforms & Games API + Binary ROM Storage Subsystem (`v0.5.0-sprint5`) — **Concluído**
-- 🟡 **Sprint 6**: Frontend Core Shell (Angular 21, Cyberpunk Theme, Auth & RBAC UX) — **Em andamento**
-- ⚪ **Sprint 7**: Frontend Library & Admin Dashboards (Management UI)
+- 🟢 **[Sprint 6](file:///home/rafael-dev/Projetos%20Pessoais/nexus-arcade/docs/acceptance-criteria/sprint-6.md)**: Frontend Core Shell (Angular 21, Cyberpunk Theme, Auth & RBAC UX) (`v0.6.0-sprint6`) — **Concluído**
+- 🟡 **Sprint 7**: Frontend Library & Admin Dashboards (Management UI) — **Em andamento**
 - ⚪ **Sprint 8**: WebAssembly Emulator Engine (EmulatorJS & ROM Player)
 - ⚪ **Sprint 9**: Gamepad API Integration & Save States (Local + Cloud Sync)
 - ⚪ **Sprint 10**: Gamer Statistics Dashboard, Testing Suite & CI/CD Pipeline

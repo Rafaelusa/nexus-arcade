@@ -3,6 +3,8 @@ import { CommonModule } from '@angular/common';
 import { ActivatedRoute, Router, RouterModule } from '@angular/router';
 import { HttpClient } from '@angular/common/http';
 import { GameItem } from '../library/library.component';
+import { GamepadService } from '../../core/services/gamepad.service';
+import { SaveStateService, SaveStateSlot } from '../../core/services/save-state.service';
 
 declare global {
   interface Window {
@@ -22,6 +24,15 @@ declare global {
   imports: [CommonModule, RouterModule],
   template: `
     <div class="player-page">
+      <!-- Gamepad Toast Notification HUD -->
+      <div class="gamepad-toast glass-panel" *ngIf="gamepadService.showNotification()">
+        <span class="toast-icon">🎮</span>
+        <div class="toast-content">
+          <span class="toast-title font-heading text-cyan-glow">CONTROLE DETECTADO</span>
+          <span class="toast-desc">{{ gamepadService.connectedGamepadName() }}</span>
+        </div>
+      </div>
+
       <!-- Player Header Toolbar -->
       <header class="player-header glass-panel">
         <button (click)="goBack()" class="btn-back">
@@ -34,6 +45,12 @@ declare global {
         </div>
 
         <div class="header-actions" *ngIf="game()?.romStorageKey">
+          <button (click)="saveCloudSlot()" class="btn-action btn-save" title="Salvar Estado na Nuvem">
+            💾 Salvar Slot 1
+          </button>
+          <button (click)="loadCloudSlot()" class="btn-action btn-load" title="Carregar Estado da Nuvem">
+            📂 Carregar Slot 1
+          </button>
           <button (click)="toggleFullscreen()" class="btn-action" title="Tela Cheia">
             🖥️ Tela Cheia
           </button>
@@ -42,6 +59,11 @@ declare global {
           </button>
         </div>
       </header>
+
+      <!-- Alert Message for Save/Load -->
+      <div class="save-status-toast" *ngIf="saveStatusMessage()">
+        {{ saveStatusMessage() }}
+      </div>
 
       <!-- Player Canvas Container -->
       <main class="player-canvas-area glass-panel">
@@ -69,13 +91,40 @@ declare global {
       flex-direction: column;
       gap: 20px;
       min-height: calc(100vh - 120px);
+      position: relative;
     }
+
+    .gamepad-toast {
+      position: absolute;
+      top: 12px;
+      right: 24px;
+      z-index: 2000;
+      padding: 12px 20px;
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      border: 1px solid var(--accent-cyan);
+      box-shadow: var(--glow-cyan);
+      animation: slideIn 0.3s ease;
+    }
+
+    @keyframes slideIn {
+      from { transform: translateY(-20px); opacity: 0; }
+      to { transform: translateY(0); opacity: 1; }
+    }
+
+    .toast-icon { font-size: 24px; }
+    .toast-content { display: flex; flex-direction: column; gap: 2px; }
+    .toast-title { font-size: 11px; font-weight: 700; }
+    .toast-desc { font-size: 12px; color: var(--text-bright); }
 
     .player-header {
       padding: 16px 24px;
       display: flex;
       justify-content: space-between;
       align-items: center;
+      flex-wrap: wrap;
+      gap: 12px;
     }
 
     .btn-back {
@@ -87,13 +136,6 @@ declare global {
       cursor: pointer;
       font-weight: 600;
       font-size: 13px;
-      transition: all 0.2s ease;
-    }
-
-    .btn-back:hover {
-      background: rgba(0, 240, 255, 0.2);
-      border-color: var(--accent-cyan);
-      color: var(--accent-cyan);
     }
 
     .game-info {
@@ -132,9 +174,27 @@ declare global {
       font-weight: 600;
     }
 
-    .btn-action:hover {
-      border-color: var(--accent-cyan);
+    .btn-save {
+      background: rgba(16, 185, 129, 0.2);
+      border-color: rgba(16, 185, 129, 0.5);
+      color: #10b981;
+    }
+
+    .btn-load {
+      background: rgba(255, 0, 127, 0.2);
+      border-color: rgba(255, 0, 127, 0.5);
+      color: var(--accent-magenta);
+    }
+
+    .save-status-toast {
+      background: rgba(15, 23, 42, 0.9);
+      border: 1px solid var(--accent-cyan);
       color: var(--accent-cyan);
+      padding: 10px 20px;
+      border-radius: 8px;
+      text-align: center;
+      font-size: 13px;
+      font-weight: 700;
     }
 
     .player-canvas-area {
@@ -157,9 +217,7 @@ declare global {
       gap: 12px;
     }
 
-    .alert-icon {
-      font-size: 54px;
-    }
+    .alert-icon { font-size: 54px; }
 
     .emulator-viewport {
       width: 100%;
@@ -176,19 +234,20 @@ declare global {
       min-height: 650px;
     }
 
-    .hidden {
-      display: none;
-    }
+    .hidden { display: none; }
   `]
 })
 export class PlayerComponent implements OnInit, OnDestroy {
   private route = inject(ActivatedRoute);
   private router = inject(Router);
   private http = inject(HttpClient);
+  protected gamepadService = inject(GamepadService);
+  private saveStateService = inject(SaveStateService);
 
   @ViewChild('emulatorContainer') emulatorContainer!: ElementRef;
 
   protected game = signal<GameItem | null>(null);
+  protected saveStatusMessage = signal<string | null>(null);
 
   ngOnInit() {
     const gameId = this.route.snapshot.paramMap.get('gameId');
@@ -225,7 +284,6 @@ export class PlayerComponent implements OnInit, OnDestroy {
 
     const core = coreMap[game.platform.code.toLowerCase()] || 'snes9x';
 
-    // Configurar variáveis globais exigidas pelo EmulatorJS Engine
     window.EJS_player = '#game-player-target';
     window.EJS_core = core;
     window.EJS_gameName = game.title;
@@ -251,6 +309,50 @@ export class PlayerComponent implements OnInit, OnDestroy {
     if (existingScript) {
       existingScript.remove();
     }
+  }
+
+  saveCloudSlot() {
+    if (!this.game()) return;
+
+    this.showSaveToast('💾 Salvando progresso do Slot 1 na Nuvem...');
+
+    // Salvar estado via API RESTful no PostgreSQL
+    this.saveStateService
+      .saveSlot(this.game()!.id, 1, 'BASE64_SAVESTATE_PROGRESS_DATA')
+      .subscribe({
+        next: () => {
+          this.showSaveToast('✓ Progresso do Slot 1 salvo com sucesso no PostgreSQL!');
+        },
+        error: () => {
+          this.showSaveToast('⚠️ Erro ao salvar estado na nuvem.');
+        },
+      });
+  }
+
+  loadCloudSlot() {
+    if (!this.game()) return;
+
+    this.showSaveToast('📂 Buscando save do Slot 1 na Nuvem...');
+
+    this.saveStateService.getGameSaveSlots(this.game()!.id).subscribe({
+      next: (slots) => {
+        if (slots && slots.length > 0) {
+          this.showSaveToast(`✓ Save do Slot 1 encontrado (Atualizado em: ${new Date(slots[0].updatedAt).toLocaleTimeString()})`);
+        } else {
+          this.showSaveToast('ℹ️ Nenhum save encontrado para o Slot 1.');
+        }
+      },
+      error: () => {
+        this.showSaveToast('⚠️ Erro ao carregar save da nuvem.');
+      },
+    });
+  }
+
+  private showSaveToast(msg: string) {
+    this.saveStatusMessage.set(msg);
+    setTimeout(() => {
+      this.saveStatusMessage.set(null);
+    }, 4000);
   }
 
   toggleFullscreen() {

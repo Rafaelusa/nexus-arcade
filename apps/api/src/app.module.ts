@@ -8,6 +8,7 @@ import { UsersModule } from './users/users.module';
 import { StorageModule } from './storage/storage.module';
 import { PlatformsModule } from './platforms/platforms.module';
 import { GamesModule } from './games/games.module';
+import { SavesModule } from './saves/saves.module';
 
 @Module({
   imports: [
@@ -18,6 +19,7 @@ import { GamesModule } from './games/games.module';
     StorageModule,
     PlatformsModule,
     GamesModule,
+    SavesModule,
   ],
   controllers: [AppController],
   providers: [AppService],

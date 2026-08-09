@@ -3,6 +3,7 @@ import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { HttpClient } from '@angular/common/http';
 import { PlatformItem } from '../../library/library.component';
+import { AuthService } from '../../../core/services/auth.service';
 
 export interface AdminGameItem {
   id: string;
@@ -115,9 +116,9 @@ export interface AdminGameItem {
             </div>
 
             <div class="form-group">
-              <label class="font-heading">URL da Capa (Opcional - Link de Imagem Web)</label>
-              <input type="url" [(ngModel)]="newCoverUrl" name="newCoverUrl" class="input-field" placeholder="https://... (Deixe em branco para capa retro automática)" />
-              <span class="input-hint">💡 Se deixado em branco, uma capa retro referente à plataforma será vinculada automaticamente.</span>
+              <label class="font-heading">URL da Capa (Opcional - Link Direto de Imagem)</label>
+              <input type="url" [(ngModel)]="newCoverUrl" name="newCoverUrl" class="input-field" placeholder="https://exemplo.com/capa.jpg" />
+              <span class="input-hint">💡 Cole o link direto da imagem (.jpg, .png, .webp). Se em branco, uma capa retro da plataforma será vinculada.</span>
             </div>
 
             <div class="form-group">
@@ -175,13 +176,14 @@ export interface AdminGameItem {
           <div class="modal-form">
             <!-- Opção 1: Definir por URL de Imagem -->
             <div class="form-group">
-              <label class="font-heading">Opção A: Cole o Link / URL da Imagem</label>
+              <label class="font-heading">Opção A: Cole o Link Direto de Imagem (URL)</label>
               <div class="url-input-row">
                 <input type="url" [(ngModel)]="coverUrlInput" class="input-field" placeholder="https://exemplo.com/capa.jpg" />
                 <button type="button" (click)="saveCoverUrl()" [disabled]="!coverUrlInput || isUploading()" class="btn-action btn-rom">
                   Salvar Link
                 </button>
               </div>
+              <span class="input-hint">📌 Importante: Use o link direto de uma imagem (ex: terminando em .jpg, .png, .webp). Links de páginas HTML não são exibidos como imagem.</span>
             </div>
 
             <hr class="divider" />
@@ -440,6 +442,7 @@ export interface AdminGameItem {
 })
 export class AdminGamesComponent implements OnInit {
   private http = inject(HttpClient);
+  private authService = inject(AuthService);
 
   protected games = signal<AdminGameItem[]>([]);
   protected platforms = signal<PlatformItem[]>([]);
@@ -505,7 +508,11 @@ export class AdminGamesComponent implements OnInit {
           this.loadGames();
         },
         error: (err) => {
-          this.errorMessage.set(err.error?.message || 'Erro ao cadastrar jogo.');
+          if (err.status === 401 || err.status === 403) {
+            this.errorMessage.set('Sessão expirada. Faça login novamente como Administrador.');
+          } else {
+            this.errorMessage.set(err.error?.message || 'Erro ao cadastrar jogo.');
+          }
         },
       });
   }
@@ -522,7 +529,11 @@ export class AdminGamesComponent implements OnInit {
         this.loadGames();
       },
       error: (err) => {
-        this.errorMessage.set(err.error?.message || 'Erro ao excluir jogo.');
+        if (err.status === 401 || err.status === 403) {
+          this.errorMessage.set('Sessão expirada. Faça login novamente como Administrador.');
+        } else {
+          this.errorMessage.set(err.error?.message || 'Erro ao excluir jogo.');
+        }
       },
     });
   }
@@ -560,7 +571,9 @@ export class AdminGamesComponent implements OnInit {
     this.errorMessage.set(null);
     this.successMessage.set(null);
 
-    this.http.patch(`http://localhost:3000/games/${game.id}`, { coverUrl: this.coverUrlInput }).subscribe({
+    const cleanUrl = this.coverUrlInput.trim();
+
+    this.http.patch(`http://localhost:3000/games/${game.id}`, { coverUrl: cleanUrl }).subscribe({
       next: () => {
         this.isUploading.set(false);
         this.successMessage.set(`Link de imagem da capa atualizado com sucesso!`);
@@ -569,7 +582,11 @@ export class AdminGamesComponent implements OnInit {
       },
       error: (err) => {
         this.isUploading.set(false);
-        this.errorMessage.set(err.error?.message || 'Erro ao salvar link de imagem.');
+        if (err.status === 401 || err.status === 403) {
+          this.errorMessage.set('⚠️ Sua sessão expira ou você não possui permissão de ADMIN. Faça login novamente em /login.');
+        } else {
+          this.errorMessage.set(err.error?.message || 'Erro ao salvar link de imagem.');
+        }
       },
     });
   }
@@ -594,7 +611,11 @@ export class AdminGamesComponent implements OnInit {
       },
       error: (err) => {
         this.isUploading.set(false);
-        this.errorMessage.set(err.error?.message || 'Erro no upload da ROM.');
+        if (err.status === 401 || err.status === 403) {
+          this.errorMessage.set('⚠️ Sessão expirada. Faça login novamente em /login.');
+        } else {
+          this.errorMessage.set(err.error?.message || 'Erro no upload da ROM.');
+        }
       },
     });
   }
@@ -619,7 +640,11 @@ export class AdminGamesComponent implements OnInit {
       },
       error: (err) => {
         this.isUploading.set(false);
-        this.errorMessage.set(err.error?.message || 'Erro no upload da capa.');
+        if (err.status === 401 || err.status === 403) {
+          this.errorMessage.set('⚠️ Sessão expirada. Faça login novamente em /login.');
+        } else {
+          this.errorMessage.set(err.error?.message || 'Erro no upload da capa.');
+        }
       },
     });
   }

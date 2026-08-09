@@ -7,6 +7,7 @@ import { LibraryComponent } from './features/library/library.component';
 import { FavoritesComponent } from './features/favorites/favorites.component';
 import { PlatformsViewComponent } from './features/platforms-view/platforms-view.component';
 import { SettingsComponent } from './features/settings/settings.component';
+import { PlayerComponent } from './features/player/player.component';
 import { AdminComponent } from './features/admin/admin.component';
 import { AdminUsersComponent } from './features/admin/users/admin-users.component';
 import { AdminGamesComponent } from './features/admin/games/admin-games.component';
@@ -30,6 +31,7 @@ export const routes: Routes = [
       { path: 'favorites', component: FavoritesComponent },
       { path: 'platforms', component: PlatformsViewComponent },
       { path: 'settings', component: SettingsComponent },
+      { path: 'player/:gameId', component: PlayerComponent },
       {
         path: 'admin',
         canActivate: [roleGuard],

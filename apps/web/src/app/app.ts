@@ -3,19 +3,29 @@ import { RouterOutlet } from '@angular/router';
 import { HttpClient, HttpClientModule } from '@angular/common/http';
 import { CommonModule } from '@angular/common';
 
+export interface DatabaseStats {
+  users: number;
+  platforms: number;
+  games: number;
+}
+
 export interface ApiHealth {
   status: string;
   service: string;
   version: string;
   timestamp: string;
-  database: string;
+  database: {
+    provider: string;
+    status: string;
+    stats: DatabaseStats;
+  };
   architecture: string;
 }
 
 @Component({
   selector: 'app-root',
   standalone: true,
-  imports: [RouterOutlet, CommonModule, HttpClientModule],
+  imports: [CommonModule, HttpClientModule],
   templateUrl: './app.html',
   styleUrl: './app.css',
 })

@@ -1,0 +1,147 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum UserRole {
+  ADMIN
+  GAMER
+}
+
+model User {
+  id           String   @id @default(uuid())
+  email        String   @unique
+  username     String   @unique
+  passwordHash String   @map("password_hash")
+  role         UserRole @default(GAMER)
+  avatarUrl    String?  @map("avatar_url")
+  isBlocked    Boolean  @default(false) @map("is_blocked")
+  createdAt    DateTime @default(now()) @map("created_at")
+  updatedAt    DateTime @updatedAt @map("updated_at")
+
+  userGames          UserGame[]
+  gameSessions       GameSession[]
+  saveStates         SaveState[]
+  controllerProfiles ControllerProfile[]
+  auditLogs          AuditLog[]
+
+  @@map("users")
+}
+
+model Platform {
+  id          String   @id @default(uuid())
+  name        String
+  code        String   @unique
+  description String?
+  iconUrl     String?  @map("icon_url")
+  isActive    Boolean  @default(true) @map("is_active")
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  games Game[]
+
+  @@map("platforms")
+}
+
+model Game {
+  id            String   @id @default(uuid())
+  title         String
+  description   String
+  platformId    String   @map("platform_id")
+  coverUrl      String?  @map("cover_url")
+  romStorageKey String?  @map("rom_storage_key")
+  romSize       Int?     @map("rom_size")
+  romHash       String?  @map("rom_hash")
+  releaseYear   Int?     @map("release_year")
+  developer     String?
+  publisher     String?
+  createdAt     DateTime @default(now()) @map("created_at")
+  updatedAt     DateTime @updatedAt @map("updated_at")
+
+  platform     Platform      @relation(fields: [platformId], references: [id], onDelete: Cascade)
+  userGames    UserGame[]
+  gameSessions GameSession[]
+  saveStates   SaveState[]
+
+  @@map("games")
+}
+
+model UserGame {
+  id              String    @id @default(uuid())
+  userId          String    @map("user_id")
+  gameId          String    @map("game_id")
+  isFavorite      Boolean   @default(false) @map("is_favorite")
+  lastPlayedAt    DateTime? @map("last_played_at")
+  playTimeSeconds Int       @default(0) @map("play_time_seconds")
+  createdAt       DateTime  @default(now()) @map("created_at")
+  updatedAt       DateTime  @updatedAt @map("updated_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  game Game @relation(fields: [gameId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, gameId])
+  @@map("user_games")
+}
+
+model GameSession {
+  id              String    @id @default(uuid())
+  userId          String    @map("user_id")
+  gameId          String    @map("game_id")
+  startedAt       DateTime  @default(now()) @map("started_at")
+  endedAt         DateTime? @map("ended_at")
+  durationSeconds Int?      @map("duration_seconds")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  game Game @relation(fields: [gameId], references: [id], onDelete: Cascade)
+
+  @@map("game_sessions")
+}
+
+model SaveState {
+  id            String   @id @default(uuid())
+  userId        String   @map("user_id")
+  gameId        String   @map("game_id")
+  slotIndex     Int      @default(0) @map("slot_index")
+  name          String   @default("Auto Save")
+  storageKey    String   @map("storage_key")
+  screenshotUrl String?  @map("screenshot_url")
+  createdAt     DateTime @default(now()) @map("created_at")
+  updatedAt     DateTime @updatedAt @map("updated_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  game Game @relation(fields: [gameId], references: [id], onDelete: Cascade)
+
+  @@map("save_states")
+}
+
+model ControllerProfile {
+  id          String   @id @default(uuid())
+  userId      String   @map("user_id")
+  name        String
+  mappingJson Json     @map("mapping_json")
+  isDefault   Boolean  @default(false) @map("is_default")
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("controller_profiles")
+}
+
+model AuditLog {
+  id         String   @id @default(uuid())
+  userId     String?  @map("user_id")
+  action     String
+  resource   String
+  resourceId String?  @map("resource_id")
+  metadata   Json?
+  createdAt  DateTime @default(now()) @map("created_at")
+
+  user User? @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  @@map("audit_logs")
+}

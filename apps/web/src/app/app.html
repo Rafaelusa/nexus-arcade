@@ -9,16 +9,16 @@
     <div class="nav-status">
       <span class="status-badge" [class.online]="apiHealth()" [class.offline]="apiError()">
         <span class="pulse-dot"></span>
-        {{ apiHealth() ? 'API CONECTADA' : (apiError() ? 'API DESCONECTADA' : 'VERIFICANDO API...') }}
+        {{ apiHealth() ? 'API & PRISMA CONECTADOS' : (apiError() ? 'API DESCONECTADA' : 'VERIFICANDO BANCO...') }}
       </span>
-      <span class="badge-sprint">SPRINT 1 - FOUNDATION</span>
+      <span class="badge-sprint">SPRINT 2 - DATABASE LAYER</span>
     </div>
   </header>
 
   <!-- Hero Section -->
   <main class="main-content">
     <section class="hero-section glass-panel">
-      <div class="hero-badge font-pixel">SYSTEM ONLINE // MONOREPO V0.1.0</div>
+      <div class="hero-badge font-pixel">DATABASE ONLINE // POSTGRESQL + PRISMA ORM</div>
       <h1 class="hero-title">YOUR GAMES. YOUR LIBRARY. <span class="text-cyan-glow">YOUR WORLD.</span></h1>
       <p class="hero-subtitle">
         Plataforma web Full Stack para gerenciamento, organização e execução de jogos clássicos emulado via WebAssembly diretamente no navegador.
@@ -29,41 +29,41 @@
           <span>📚 APIDocs (Swagger)</span>
         </a>
         <button (click)="checkBackendHealth()" class="btn-outline">
-          <span>🔄 Testar Conexão API</span>
+          <span>🔄 Consultar Banco (Prisma)</span>
         </button>
       </div>
     </section>
 
-    <!-- Architecture Grid -->
-    <section class="features-grid">
+    <!-- Database Stats Summary Cards -->
+    <section class="features-grid" *ngIf="apiHealth()">
       <div class="feature-card glass-panel">
-        <div class="card-icon">⚡</div>
-        <h3 class="card-title font-heading">One Command Dev</h3>
+        <div class="card-icon">👥</div>
+        <h3 class="card-title font-heading">Usuários Cadastrados</h3>
         <p class="card-text">
-          Inicialização automática do ecossistema local com <code class="code-inline">npm run start</code>. Postgres em Docker, migrations e servidores.
+          <strong class="text-cyan-glow font-heading text-xl">{{ apiHealth()?.database?.stats?.users }}</strong> Usuário (ADMIN criado via seed idempotente com Argon2id).
         </p>
       </div>
 
       <div class="feature-card glass-panel">
-        <div class="card-icon">🛡️</div>
-        <h3 class="card-title font-heading">RBAC Security</h3>
+        <div class="card-icon">🕹️</div>
+        <h3 class="card-title font-heading">Plataformas Ativas</h3>
         <p class="card-text">
-          Controle de acesso por papéis (GAMER & ADMIN) enforced com Guards no NestJS, JWT tokens e hashing Argon2id.
+          <strong class="text-magenta-glow font-heading text-xl">{{ apiHealth()?.database?.stats?.platforms }}</strong> Plataforma (<code class="code-inline">Super Nintendo (SNES)</code> cadastrada via Seed).
         </p>
       </div>
 
       <div class="feature-card glass-panel">
-        <div class="card-icon">🎮</div>
-        <h3 class="card-title font-heading">WebAssembly Core</h3>
+        <div class="card-icon">👾</div>
+        <h3 class="card-title font-heading">Jogos no Catálogo</h3>
         <p class="card-text">
-          Mecanismo de emulação nativo no browser com EmulatorJS, RetroArch Cores, suporte a controles físicos (Gamepad API) e Save States.
+          <strong class="text-cyan-glow font-heading text-xl">{{ apiHealth()?.database?.stats?.games }}</strong> Jogo Demo (<code class="code-inline">Super Mario World</code> vinculado a SNES).
         </p>
       </div>
     </section>
 
     <!-- System Diagnostic Status Card -->
     <section class="diagnostic-card glass-panel">
-      <h2 class="diagnostic-title font-heading text-cyan-glow">🔍 Status do Ambiente Local</h2>
+      <h2 class="diagnostic-title font-heading text-cyan-glow">🔍 Status do Banco de Dados & Serviços</h2>
 
       <div class="status-rows">
         <div class="status-row">
@@ -78,7 +78,7 @@
         </div>
         <div class="status-row">
           <span class="row-label">Banco de Dados PostgreSQL:</span>
-          <span class="row-value val-green">localhost:5432 (Docker Container)</span>
+          <span class="row-value val-green">localhost:5432 (Prisma ORM - Connected)</span>
         </div>
         <div class="status-row" *ngIf="apiHealth()">
           <span class="row-label">Versão da API:</span>
@@ -89,6 +89,6 @@
   </main>
 
   <footer class="footer glass-panel">
-    <p>Nexus Arcade &copy; 2026 — Plataforma Full Stack de Emulação Web. Desenvolvido para máxima performance e elegância.</p>
+    <p>Nexus Arcade &copy; 2026 — Plataforma Full Stack de Emulação Web. Desenvolvido com Angular 21, NestJS & Prisma ORM.</p>
   </footer>
 </div>

@@ -2,6 +2,8 @@ const { execSync, spawn } = require('child_process');
 const fs = require('fs');
 const path = require('path');
 const { waitForDb } = require('./wait-for-db');
+const { migrate } = require('./migrate');
+const { seed } = require('./seed');
 
 // ANSI Colors for Terminal Output
 const colors = {
@@ -51,7 +53,7 @@ async function bootstrap() {
     execSync('docker info', { stdio: 'ignore' });
     console.log(`${colors.green}✓ Docker daemon ativo e disponível${colors.reset}`);
   } catch (error) {
-    console.error(`${colors.red}❌ Docker não está em execução. Inicie o Docker e tente novamente.${colors.reset}`);
+    console.error(`${colors.red}❌ Docker não está em execução. Por favor, inicie o Docker e execute npm run start novamente.${colors.reset}`);
     process.exit(1);
   }
 
@@ -78,6 +80,24 @@ async function bootstrap() {
     process.exit(1);
   }
 
+  // 5. Execute Prisma Migrations
+  console.log(`${colors.cyan}🔄 Sincronizando Schema do Banco de Dados (Prisma Migrations)...${colors.reset}`);
+  try {
+    migrate();
+  } catch (err) {
+    console.error(`${colors.red}❌ Falha na sincronização das migrations.${colors.reset}`);
+    process.exit(1);
+  }
+
+  // 6. Execute Seed (Plataforma SNES + Usuário ADMIN + Jogo Demo)
+  console.log(`${colors.cyan}🌱 Executando Seed de Dados (SNES, ADMIN & Jogo Demo)...${colors.reset}`);
+  try {
+    await seed();
+  } catch (err) {
+    console.error(`${colors.red}❌ Falha na execução do seed.${colors.reset}`);
+    process.exit(1);
+  }
+
   console.log(`
 ${colors.bright}${colors.green}==================================================
 🚀 NEXUS ARCADE AMBIENTE PRONTO!
@@ -90,7 +110,7 @@ ${colors.bright}${colors.green}=================================================
 Iniciando servidores de desenvolvimento (NestJS & Angular)...
 `);
 
-  // 5. Start NestJS API and Angular Web app concurrently
+  // 7. Start NestJS API and Angular Web app concurrently
   const npmCmd = process.platform === 'win32' ? 'npm.cmd' : 'npm';
 
   const apiProcess = spawn(npmCmd, ['run', 'start:dev', '--workspace=apps/api'], {

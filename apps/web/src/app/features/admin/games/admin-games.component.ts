@@ -2,6 +2,7 @@ import { Component, signal, inject, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { HttpClient } from '@angular/common/http';
+import { getApiUrl } from '../../../core/config/api.config';
 import { PlatformItem } from '../../library/library.component';
 import { AuthService } from '../../../core/services/auth.service';
 
@@ -533,13 +534,13 @@ export class AdminGamesComponent implements OnInit {
   }
 
   loadPlatforms() {
-    this.http.get<PlatformItem[]>('http://localhost:3000/platforms').subscribe({
+    this.http.get<PlatformItem[]>(`${getApiUrl()}/platforms`).subscribe({
       next: (res) => this.platforms.set(res),
     });
   }
 
   loadGames() {
-    this.http.get<{ data: AdminGameItem[] }>('http://localhost:3000/games').subscribe({
+    this.http.get<{ data: AdminGameItem[] }>(`${getApiUrl()}/games`).subscribe({
       next: (res) => this.games.set(res.data),
     });
   }
@@ -551,7 +552,7 @@ export class AdminGamesComponent implements OnInit {
     this.successMessage.set(null);
 
     this.http
-      .post('http://localhost:3000/games', {
+      .post(`${getApiUrl()}/games`, {
         title: this.newTitle,
         platformId: this.newPlatformId,
         description: this.newDescription,
@@ -593,7 +594,7 @@ export class AdminGamesComponent implements OnInit {
     this.successMessage.set(null);
 
     this.http
-      .patch(`http://localhost:3000/games/${game.id}`, {
+      .patch(`${getApiUrl()}/games/${game.id}`, {
         title: this.editTitle,
         platformId: this.editPlatformId,
         coverUrl: this.editCoverUrl.trim() || undefined,
@@ -619,7 +620,7 @@ export class AdminGamesComponent implements OnInit {
     this.errorMessage.set(null);
     this.successMessage.set(null);
 
-    this.http.delete<{ message: string }>(`http://localhost:3000/games/${game.id}`).subscribe({
+    this.http.delete<{ message: string }>(`${getApiUrl()}/games/${game.id}`).subscribe({
       next: (res) => {
         this.successMessage.set(res.message);
         this.loadGames();
@@ -669,7 +670,7 @@ export class AdminGamesComponent implements OnInit {
       cleanUrl = 'https://upload.wikimedia.org/wikipedia/pt/2/23/Donkey_Kong_Country_3_capa.jpg';
     }
 
-    this.http.patch(`http://localhost:3000/games/${game.id}`, { coverUrl: cleanUrl }).subscribe({
+    this.http.patch(`${getApiUrl()}/games/${game.id}`, { coverUrl: cleanUrl }).subscribe({
       next: () => {
         this.isUploading.set(false);
         this.successMessage.set(`Link de imagem da capa atualizado com sucesso!`);
@@ -694,7 +695,7 @@ export class AdminGamesComponent implements OnInit {
     const formData = new FormData();
     formData.append('file', this.romFileToUpload);
 
-    this.http.post(`http://localhost:3000/games/${game.id}/rom`, formData).subscribe({
+    this.http.post(`${getApiUrl()}/games/${game.id}/rom`, formData).subscribe({
       next: () => {
         this.isUploading.set(false);
         this.successMessage.set(`ROM binária para "${game.title}" enviada com sucesso! SHA-256 gravado no banco.`);
@@ -719,7 +720,7 @@ export class AdminGamesComponent implements OnInit {
     const formData = new FormData();
     formData.append('file', this.coverFileToUpload);
 
-    this.http.post(`http://localhost:3000/games/${game.id}/cover`, formData).subscribe({
+    this.http.post(`${getApiUrl()}/games/${game.id}/cover`, formData).subscribe({
       next: () => {
         this.isUploading.set(false);
         this.successMessage.set(`Imagem de capa enviada para "${game.title}".`);

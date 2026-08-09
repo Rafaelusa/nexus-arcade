@@ -2,6 +2,7 @@ import { Component, signal, inject, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { HttpClient } from '@angular/common/http';
+import { getApiUrl } from '../../core/config/api.config';
 import { ActivatedRoute, Router } from '@angular/router';
 
 export interface GameItem {
@@ -307,13 +308,13 @@ export class LibraryComponent implements OnInit {
   }
 
   loadPlatforms() {
-    this.http.get<PlatformItem[]>('http://localhost:3000/platforms').subscribe({
+    this.http.get<PlatformItem[]>(`${getApiUrl()}/platforms`).subscribe({
       next: (res) => this.platforms.set(res),
     });
   }
 
   loadGames() {
-    let url = `http://localhost:3000/games?search=${encodeURIComponent(this.searchQuery)}`;
+    let url = `${getApiUrl()}/games?search=${encodeURIComponent(this.searchQuery)}`;
     if (this.selectedPlatformCode) {
       url += `&platformCode=${this.selectedPlatformCode}`;
     }

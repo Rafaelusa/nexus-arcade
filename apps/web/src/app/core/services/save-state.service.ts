@@ -1,6 +1,7 @@
 import { Injectable, inject } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Observable } from 'rxjs';
+import { getApiUrl } from '../config/api.config';
 
 export interface SaveStateSlot {
   id: string;
@@ -16,7 +17,10 @@ export interface SaveStateSlot {
 })
 export class SaveStateService {
   private http = inject(HttpClient);
-  private readonly API_URL = 'http://localhost:3000/saves';
+
+  private get API_URL() {
+    return `${getApiUrl()}/saves`;
+  }
 
   saveSlot(gameId: string, slotNumber: number, stateData: string, screenshotUrl?: string): Observable<SaveStateSlot> {
     return this.http.post<SaveStateSlot>(this.API_URL, {

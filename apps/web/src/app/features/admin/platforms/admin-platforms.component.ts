@@ -2,6 +2,7 @@ import { Component, signal, inject, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { HttpClient } from '@angular/common/http';
+import { getApiUrl } from '../../../core/config/api.config';
 import { PlatformDetail } from '../../platforms-view/platforms-view.component';
 
 @Component({
@@ -343,7 +344,7 @@ export class AdminPlatformsComponent implements OnInit {
   }
 
   loadPlatforms() {
-    this.http.get<PlatformDetail[]>('http://localhost:3000/platforms?onlyActive=false').subscribe({
+    this.http.get<PlatformDetail[]>(`${getApiUrl()}/platforms?onlyActive=false`).subscribe({
       next: (res) => this.platforms.set(res),
     });
   }
@@ -355,7 +356,7 @@ export class AdminPlatformsComponent implements OnInit {
     this.successMessage.set(null);
 
     this.http
-      .post('http://localhost:3000/platforms', {
+      .post(`${getApiUrl()}/platforms`, {
         name: this.newName,
         code: this.newCode,
         description: this.newDescription,
@@ -391,7 +392,7 @@ export class AdminPlatformsComponent implements OnInit {
     this.successMessage.set(null);
 
     this.http
-      .patch(`http://localhost:3000/platforms/${plat.id}`, {
+      .patch(`${getApiUrl()}/platforms/${plat.id}`, {
         name: this.editName,
         code: this.editCode,
         description: this.editDescription,
@@ -415,7 +416,7 @@ export class AdminPlatformsComponent implements OnInit {
     this.errorMessage.set(null);
     this.successMessage.set(null);
 
-    this.http.delete<{ message: string }>(`http://localhost:3000/platforms/${plat.id}`).subscribe({
+    this.http.delete<{ message: string }>(`${getApiUrl()}/platforms/${plat.id}`).subscribe({
       next: (res) => {
         this.successMessage.set(res.message);
         this.loadPlatforms();

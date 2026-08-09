@@ -3,6 +3,7 @@ import { HttpClient } from '@angular/common/http';
 import { Router } from '@angular/router';
 import { Observable, tap, catchError, of } from 'rxjs';
 import { User, UserRole, AuthResponse } from '../models/auth.model';
+import { getApiUrl } from '../config/api.config';
 
 @Injectable({
   providedIn: 'root',
@@ -11,7 +12,9 @@ export class AuthService {
   private http = inject(HttpClient);
   private router = inject(Router);
 
-  private readonly API_URL = 'http://localhost:3000/auth';
+  private get API_URL() {
+    return `${getApiUrl()}/auth`;
+  }
 
   // Signals para gerenciamento reativo do estado da sessão
   readonly currentUser = signal<User | null>(this.getStoredUser());

@@ -1,6 +1,7 @@
 import { Component, signal, inject, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { HttpClient } from '@angular/common/http';
+import { getApiUrl } from '../../core/config/api.config';
 import { Router } from '@angular/router';
 import { AuthService } from '../../core/services/auth.service';
 
@@ -392,7 +393,7 @@ export class DashboardComponent implements OnInit {
   }
 
   loadSystemStats() {
-    this.http.get<ApiHealth>('http://localhost:3000/health').subscribe({
+    this.http.get<ApiHealth>(`${getApiUrl()}/health`).subscribe({
       next: (res) => {
         if (res?.database?.stats) {
           this.systemStats.set(res.database.stats);
@@ -402,13 +403,13 @@ export class DashboardComponent implements OnInit {
   }
 
   loadPlatforms() {
-    this.http.get<PlatformItem[]>('http://localhost:3000/platforms').subscribe({
+    this.http.get<PlatformItem[]>(`${getApiUrl()}/platforms`).subscribe({
       next: (res) => this.platforms.set(res),
     });
   }
 
   loadGamerStats() {
-    this.http.get<UserGamerStats>('http://localhost:3000/stats/me').subscribe({
+    this.http.get<UserGamerStats>(`${getApiUrl()}/stats/me`).subscribe({
       next: (res) => this.userStats.set(res),
       error: () => {},
     });

@@ -1,6 +1,7 @@
 import { Component, signal, inject, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { HttpClient } from '@angular/common/http';
+import { getApiUrl } from '../../../core/config/api.config';
 
 export interface AuditLogItem {
   id: string;
@@ -174,7 +175,7 @@ export class AdminLogsComponent implements OnInit {
   protected logs = signal<AuditLogItem[]>([]);
 
   ngOnInit() {
-    this.http.get<{ data: AuditLogItem[] }>('http://localhost:3000/audit-logs').subscribe({
+    this.http.get<{ data: AuditLogItem[] }>(`${getApiUrl()}/audit-logs`).subscribe({
       next: (res) => this.logs.set(res.data),
     });
   }

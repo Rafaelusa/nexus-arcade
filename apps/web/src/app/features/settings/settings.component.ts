@@ -2,6 +2,7 @@ import { Component, signal, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { HttpClient } from '@angular/common/http';
+import { getApiUrl } from '../../core/config/api.config';
 import { AuthService } from '../../core/services/auth.service';
 import { GamepadService } from '../../core/services/gamepad.service';
 
@@ -263,7 +264,7 @@ export class SettingsComponent {
     this.profileError.set(null);
 
     this.http
-      .patch('http://localhost:3000/users/me/profile', {
+      .patch(`${getApiUrl()}/users/me/profile`, {
         username: this.profileUsername,
         avatarUrl: this.profileAvatarUrl,
       })
@@ -291,7 +292,7 @@ export class SettingsComponent {
     this.passError.set(null);
 
     this.http
-      .patch<{ message: string }>('http://localhost:3000/users/me/password', {
+      .patch<{ message: string }>(`${getApiUrl()}/users/me/password`, {
         currentPassword: this.currentPassword,
         newPassword: this.newPassword,
       })

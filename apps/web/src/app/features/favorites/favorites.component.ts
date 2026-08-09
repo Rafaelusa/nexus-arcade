@@ -2,6 +2,7 @@ import { Component, signal, inject, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { HttpClient } from '@angular/common/http';
 import { Router } from '@angular/router';
+import { getApiUrl } from '../../core/config/api.config';
 import { GameItem } from '../library/library.component';
 
 @Component({
@@ -195,7 +196,7 @@ export class FavoritesComponent implements OnInit {
         return;
       }
 
-      this.http.get<{ data: GameItem[] }>('http://localhost:3000/games').subscribe({
+      this.http.get<{ data: GameItem[] }>(`${getApiUrl()}/games`).subscribe({
         next: (res) => {
           const filtered = res.data.filter((game) => favIds.includes(game.id));
           this.favoriteGames.set(filtered);

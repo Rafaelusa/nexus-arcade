@@ -2,6 +2,7 @@ import { Component, signal, inject, OnInit, OnDestroy, ElementRef, ViewChild } f
 import { CommonModule } from '@angular/common';
 import { ActivatedRoute, Router, RouterModule, NavigationStart } from '@angular/router';
 import { HttpClient } from '@angular/common/http';
+import { getApiUrl } from '../../core/config/api.config';
 import { filter, Subscription } from 'rxjs';
 import { GameItem } from '../library/library.component';
 import { GamepadService } from '../../core/services/gamepad.service';
@@ -279,7 +280,7 @@ export class PlayerComponent implements OnInit, OnDestroy {
   }
 
   loadGame(gameId: string) {
-    this.http.get<GameItem>(`http://localhost:3000/games/${gameId}`).subscribe({
+    this.http.get<GameItem>(`${getApiUrl()}/games/${gameId}`).subscribe({
       next: (res) => {
         this.game.set(res);
         if (res.romStorageKey) {
@@ -307,7 +308,7 @@ export class PlayerComponent implements OnInit, OnDestroy {
     window.EJS_player = '#game-player-target';
     window.EJS_core = core;
     window.EJS_gameName = game.title;
-    window.EJS_gameUrl = `http://localhost:3000/games/${game.id}/rom/stream`;
+    window.EJS_gameUrl = `${getApiUrl()}/games/${game.id}/rom/stream`;
     window.EJS_pathtodata = 'https://cdn.emulatorjs.org/stable/data/';
     window.EJS_startOnLoaded = true;
 

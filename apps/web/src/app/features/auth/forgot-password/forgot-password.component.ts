@@ -3,6 +3,7 @@ import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { HttpClient } from '@angular/common/http';
 import { Router, RouterModule } from '@angular/router';
+import { getApiUrl } from '../../../core/config/api.config';
 
 export interface ForgotPasswordResponse {
   message: string;
@@ -203,7 +204,7 @@ export class ForgotPasswordComponent {
     this.devResetUrl.set(null);
 
     this.http
-      .post<ForgotPasswordResponse>('http://localhost:3000/auth/forgot-password', { email: this.email })
+      .post<ForgotPasswordResponse>(`${getApiUrl()}/auth/forgot-password`, { email: this.email })
       .subscribe({
         next: (res) => {
           this.isLoading.set(false);

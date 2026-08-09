@@ -2,6 +2,7 @@ import { Component, signal, inject, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { HttpClient } from '@angular/common/http';
 import { Router } from '@angular/router';
+import { getApiUrl } from '../../core/config/api.config';
 
 export interface PlatformDetail {
   id: string;
@@ -181,7 +182,7 @@ export class PlatformsViewComponent implements OnInit {
   protected platforms = signal<PlatformDetail[]>([]);
 
   ngOnInit() {
-    this.http.get<PlatformDetail[]>('http://localhost:3000/platforms').subscribe({
+    this.http.get<PlatformDetail[]>(`${getApiUrl()}/platforms`).subscribe({
       next: (res) => this.platforms.set(res),
     });
   }

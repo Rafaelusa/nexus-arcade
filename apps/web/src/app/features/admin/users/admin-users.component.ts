@@ -2,6 +2,7 @@ import { Component, signal, inject, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { HttpClient } from '@angular/common/http';
+import { getApiUrl } from '../../../core/config/api.config';
 
 export interface UserItem {
   id: string;
@@ -347,7 +348,7 @@ export class AdminUsersComponent implements OnInit {
   }
 
   loadUsers() {
-    this.http.get<{ data: UserItem[] }>('http://localhost:3000/users').subscribe({
+    this.http.get<{ data: UserItem[] }>(`${getApiUrl()}/users`).subscribe({
       next: (res) => this.users.set(res.data),
     });
   }
@@ -356,7 +357,7 @@ export class AdminUsersComponent implements OnInit {
     this.errorMessage.set(null);
     this.successMessage.set(null);
 
-    this.http.patch(`http://localhost:3000/users/${user.id}/block`, {}).subscribe({
+    this.http.patch(`${getApiUrl()}/users/${user.id}/block`, {}).subscribe({
       next: () => {
         this.successMessage.set(`Status de bloqueio do usuário "${user.username}" foi alterado.`);
         this.loadUsers();
@@ -373,7 +374,7 @@ export class AdminUsersComponent implements OnInit {
     this.errorMessage.set(null);
     this.successMessage.set(null);
 
-    this.http.delete<{ message: string }>(`http://localhost:3000/users/${user.id}`).subscribe({
+    this.http.delete<{ message: string }>(`${getApiUrl()}/users/${user.id}`).subscribe({
       next: (res) => {
         this.successMessage.set(res.message);
         this.loadUsers();
@@ -389,7 +390,7 @@ export class AdminUsersComponent implements OnInit {
     this.successMessage.set(null);
 
     this.http
-      .post('http://localhost:3000/users', {
+      .post(`${getApiUrl()}/users`, {
         email: this.newEmail,
         username: this.newUsername,
         password: this.newPassword,

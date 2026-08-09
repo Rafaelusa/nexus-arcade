@@ -3,6 +3,7 @@ import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { HttpClient } from '@angular/common/http';
 import { ActivatedRoute, Router, RouterModule } from '@angular/router';
+import { getApiUrl } from '../../../core/config/api.config';
 
 @Component({
   selector: 'app-reset-password',
@@ -195,7 +196,7 @@ export class ResetPasswordComponent implements OnInit {
     this.errorMessage.set(null);
 
     this.http
-      .post<{ message: string }>('http://localhost:3000/auth/reset-password', {
+      .post<{ message: string }>(`${getApiUrl()}/auth/reset-password`, {
         resetToken: this.resetToken,
         newPassword: this.newPassword,
       })

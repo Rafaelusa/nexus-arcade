@@ -131,7 +131,8 @@ export class AuthService {
     // Mensagem genérica segura padronizada anti-enumeração
     if (!user || user.isBlocked) {
       return {
-        message: 'Se o e-mail informado estiver ativo, enviamos um link seguro de redefinição de senha para sua caixa de entrada.',
+        message: 'Se o e-mail informado estiver cadastrado, um link seguro de redefinição de senha foi gerado.',
+        sentRealEmail: false,
       };
     }
 
@@ -140,13 +141,15 @@ export class AuthService {
       { expiresIn: '15m' },
     );
 
-    // Disparar e-mail em background através do Robô MailService
-    await this.mailService.sendPasswordResetEmail(user.email, resetToken).catch((err) => {
-      console.error('[AuthService] Falha ao enviar e-mail de redefinição:', err);
-    });
+    // Disparar e-mail através do Robô MailService
+    const mailResult = await this.mailService.sendPasswordResetEmail(user.email, resetToken);
 
     return {
-      message: 'Se o e-mail informado estiver ativo, enviamos um link seguro de redefinição de senha para sua caixa de entrada.',
+      message: mailResult.sentRealEmail
+        ? 'Um e-mail de redefinição de senha foi enviado com sucesso para sua caixa de entrada!'
+        : 'Se o e-mail informado estiver cadastrado, o link seguro de redefinição de senha foi gerado.',
+      sentRealEmail: mailResult.sentRealEmail,
+      devResetUrl: `http://localhost:4200/reset-password?token=${resetToken}`,
       resetToken,
     };
   }

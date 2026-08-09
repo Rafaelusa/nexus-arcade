@@ -4,31 +4,49 @@ import * as nodemailer from 'nodemailer';
 @Injectable()
 export class MailService {
   private readonly logger = new Logger(MailService.name);
-  private transporter: nodemailer.Transporter;
+  private transporter: nodemailer.Transporter | null = null;
+  private isRealSmtpConfigured = false;
 
   constructor() {
     this.initTransporter();
   }
 
   private async initTransporter() {
-    // Para ambiente de dev/teste, usa conta Ethereal ou SMTP local simulado
-    const testAccount = await nodemailer.createTestAccount().catch(() => null);
+    const host = process.env.SMTP_HOST;
+    const user = process.env.SMTP_USER;
+    const pass = process.env.SMTP_PASS;
 
-    this.transporter = nodemailer.createTransport({
-      host: process.env.SMTP_HOST || testAccount?.smtp.host || 'smtp.ethereal.email',
-      port: Number(process.env.SMTP_PORT) || testAccount?.smtp.port || 587,
-      secure: false,
-      auth: {
-        user: process.env.SMTP_USER || testAccount?.user || 'nexus.arcade.robot@ethereal.email',
-        pass: process.env.SMTP_PASS || testAccount?.pass || 'secret_pass_123',
-      },
-    });
-
-    this.logger.log('[MailService] Robô de Envio de E-mails inicializado com sucesso.');
+    if (host && user && pass) {
+      this.isRealSmtpConfigured = true;
+      this.transporter = nodemailer.createTransport({
+        host,
+        port: Number(process.env.SMTP_PORT) || 587,
+        secure: process.env.SMTP_SECURE === 'true',
+        auth: { user, pass },
+      });
+      this.logger.log(`[MailService] Robô SMTP REAL configurado para servidor ${host} (Usuário: ${user}).`);
+    } else {
+      this.isRealSmtpConfigured = false;
+      const testAccount = await nodemailer.createTestAccount().catch(() => null);
+      if (testAccount) {
+        this.transporter = nodemailer.createTransport({
+          host: testAccount.smtp.host,
+          port: testAccount.smtp.port,
+          secure: testAccount.smtp.secure,
+          auth: { user: testAccount.user, pass: testAccount.pass },
+        });
+        this.logger.log(`[MailService] Modo Sandbox Ethereal Ativo. E-mails de teste serão capturados e os links exibidos nos logs.`);
+      }
+    }
   }
 
-  async sendPasswordResetEmail(email: string, resetToken: string): Promise<void> {
+  async sendPasswordResetEmail(email: string, resetToken: string): Promise<{ sentRealEmail: boolean; previewUrl?: string }> {
+    if (!this.transporter) {
+      await this.initTransporter();
+    }
+
     const resetUrl = `http://localhost:4200/reset-password?token=${resetToken}`;
+    const fromAddress = process.env.SMTP_FROM || '"Nexus Arcade Security" <no-reply@nexusarcade.com>';
 
     const htmlContent = `
       <div style="font-family: Arial, sans-serif; background-color: #0f172a; color: #f8fafc; padding: 32px; border-radius: 12px;">
@@ -56,25 +74,42 @@ export class MailService {
     `;
 
     try {
+      if (!this.transporter) {
+        return { sentRealEmail: false };
+      }
+
       const info = await this.transporter.sendMail({
-        from: '"Nexus Arcade Security" <no-reply@nexusarcade.com>',
+        from: fromAddress,
         to: email,
         subject: '🔒 Redefinição de Senha - Nexus Arcade',
         html: htmlContent,
       });
 
-      this.logger.log(`[MailService] E-mail de redefinição de senha enviado para ${email}. MessageId: ${info.messageId}`);
-      if (nodemailer.getTestMessageUrl(info)) {
-        this.logger.log(`[MailService] Visualizar e-mail simulado (Ethereal): ${nodemailer.getTestMessageUrl(info)}`);
+      const previewUrl = nodemailer.getTestMessageUrl(info) || undefined;
+
+      this.logger.log(`[MailService] E-mail de redefinição processado para ${email}. MessageId: ${info.messageId}`);
+      if (previewUrl) {
+        this.logger.log(`[MailService] 🔗 Link de visualização do e-mail (Ethereal Sandbox): ${previewUrl}`);
       }
+
+      return {
+        sentRealEmail: this.isRealSmtpConfigured,
+        previewUrl,
+      };
     } catch (error) {
       this.logger.error(`[MailService] Erro ao enviar e-mail para ${email}: ${error.message}`);
+      return { sentRealEmail: false };
     }
   }
 
   async sendAccountStatusNotification(email: string, username: string, isBlocked: boolean): Promise<void> {
+    if (!this.transporter) {
+      await this.initTransporter();
+    }
+
     const statusText = isBlocked ? 'BLOQUEADA' : 'DESBLOQUEADA / ATIVADA';
     const statusColor = isBlocked ? '#ef4444' : '#10b981';
+    const fromAddress = process.env.SMTP_FROM || '"Nexus Arcade Support" <support@nexusarcade.com>';
 
     const htmlContent = `
       <div style="font-family: Arial, sans-serif; background-color: #0f172a; color: #f8fafc; padding: 32px; border-radius: 12px;">
@@ -97,13 +132,15 @@ export class MailService {
     `;
 
     try {
-      await this.transporter.sendMail({
-        from: '"Nexus Arcade Support" <support@nexusarcade.com>',
-        to: email,
-        subject: `🔔 Notificação de Status de Conta (${statusText}) - Nexus Arcade`,
-        html: htmlContent,
-      });
-      this.logger.log(`[MailService] Notificação de status de conta enviada para ${email}`);
+      if (this.transporter) {
+        await this.transporter.sendMail({
+          from: fromAddress,
+          to: email,
+          subject: `🔔 Notificação de Status de Conta (${statusText}) - Nexus Arcade`,
+          html: htmlContent,
+        });
+        this.logger.log(`[MailService] Notificação de status de conta enviada para ${email}`);
+      }
     } catch (error) {
       this.logger.error(`[MailService] Erro ao enviar notificação de status para ${email}: ${error.message}`);
     }

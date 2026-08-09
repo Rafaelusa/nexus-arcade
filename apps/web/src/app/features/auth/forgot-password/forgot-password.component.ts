@@ -4,6 +4,12 @@ import { FormsModule } from '@angular/forms';
 import { HttpClient } from '@angular/common/http';
 import { Router, RouterModule } from '@angular/router';
 
+export interface ForgotPasswordResponse {
+  message: string;
+  sentRealEmail?: boolean;
+  devResetUrl?: string;
+}
+
 @Component({
   selector: 'app-forgot-password',
   standalone: true,
@@ -18,6 +24,17 @@ import { Router, RouterModule } from '@angular/router';
         <div class="alert success" *ngIf="successMessage()">
           ✓ {{ successMessage() }}
         </div>
+
+        <div class="dev-box glass-panel" *ngIf="devResetUrl()">
+          <span class="dev-badge font-pixel">MODO DESENVOLVIMENTO / SANDBOX SMTP</span>
+          <p class="dev-text">
+            O robô MailService disparou o e-mail em ambiente local (Ethereal Sandbox). Para enviar para caixas de entrada reais (Gmail/Outlook), basta preencher <code>SMTP_USER</code> e <code>SMTP_PASS</code> no arquivo <code>.env</code>.
+          </p>
+          <a [href]="devResetUrl()" class="btn-primary btn-dev-link font-heading">
+            ⚡ Abrir Link de Redefinição Agora
+          </a>
+        </div>
+
         <div class="alert error" *ngIf="errorMessage()">
           ⚠️ {{ errorMessage() }}
         </div>
@@ -58,7 +75,7 @@ import { Router, RouterModule } from '@angular/router';
 
     .auth-card {
       width: 100%;
-      max-width: 440px;
+      max-width: 480px;
       padding: 40px;
       display: flex;
       flex-direction: column;
@@ -134,6 +151,34 @@ import { Router, RouterModule } from '@angular/router';
       color: #ef4444;
     }
 
+    .dev-box {
+      padding: 16px 20px;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      text-align: left;
+      border: 1px dashed var(--accent-cyan);
+      background: rgba(0, 240, 255, 0.05);
+    }
+
+    .dev-badge {
+      font-size: 9px;
+      color: var(--accent-cyan);
+    }
+
+    .dev-text {
+      font-size: 12px;
+      color: var(--text-muted);
+      line-height: 1.4;
+    }
+
+    .btn-dev-link {
+      text-decoration: none;
+      text-align: center;
+      display: inline-block;
+      margin-top: 4px;
+    }
+
     .link-cyan {
       color: var(--accent-cyan);
       text-decoration: none;
@@ -148,22 +193,29 @@ export class ForgotPasswordComponent {
   protected isLoading = signal(false);
   protected successMessage = signal<string | null>(null);
   protected errorMessage = signal<string | null>(null);
+  protected devResetUrl = signal<string | null>(null);
 
   sendResetEmail() {
     if (!this.email) return;
 
     this.isLoading.set(true);
     this.errorMessage.set(null);
+    this.devResetUrl.set(null);
 
-    this.http.post<{ message: string }>('http://localhost:3000/auth/forgot-password', { email: this.email }).subscribe({
-      next: (res) => {
-        this.isLoading.set(false);
-        this.successMessage.set(res.message);
-      },
-      error: (err) => {
-        this.isLoading.set(false);
-        this.errorMessage.set(err.error?.message || 'Falha ao solicitar redefinição de senha.');
-      },
-    });
+    this.http
+      .post<ForgotPasswordResponse>('http://localhost:3000/auth/forgot-password', { email: this.email })
+      .subscribe({
+        next: (res) => {
+          this.isLoading.set(false);
+          this.successMessage.set(res.message);
+          if (res.devResetUrl && !res.sentRealEmail) {
+            this.devResetUrl.set(res.devResetUrl);
+          }
+        },
+        error: (err) => {
+          this.isLoading.set(false);
+          this.errorMessage.set(err.error?.message || 'Falha ao solicitar redefinição de senha.');
+        },
+      });
   }
 }

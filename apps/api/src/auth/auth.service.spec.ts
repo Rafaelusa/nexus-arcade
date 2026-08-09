@@ -26,7 +26,7 @@ describe('AuthService', () => {
   };
 
   const mockMailService = {
-    sendPasswordResetEmail: jest.fn().mockResolvedValue(undefined),
+    sendPasswordResetEmail: jest.fn().mockResolvedValue({ sentRealEmail: true, previewUrl: 'http://ethereal/123' }),
     sendAccountStatusNotification: jest.fn().mockResolvedValue(undefined),
   };
 

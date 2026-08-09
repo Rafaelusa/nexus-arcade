@@ -123,7 +123,7 @@ O projeto possui **8 tabelas relacionais** modeladas e migradas automaticamente:
 nexus-arcade/
 ├── apps/
 │   ├── web/                     # Frontend Angular 21
-│   └── api/                     # Backend NestJS API (Auth, RBAC, REST)
+│   └── api/                     # Backend NestJS API (Auth, Users, Audit, REST)
 ├── packages/
 │   └── shared-types/            # Tipos e DTOs compartilhados
 ├── database/
@@ -151,8 +151,8 @@ nexus-arcade/
 - 🟢 **[Sprint 1](file:///home/rafael-dev/Projetos%20Pessoais/nexus-arcade/docs/acceptance-criteria/sprint-1.md)**: Monorepo Foundation & One-Command Bootstrap (`v0.1.0-sprint1`) — **Concluído**
 - 🟢 **[Sprint 2](file:///home/rafael-dev/Projetos%20Pessoais/nexus-arcade/docs/acceptance-criteria/sprint-2.md)**: Database Layer (PostgreSQL, Prisma ORM, Migrations & Seeds) (`v0.2.0-sprint2`) — **Concluído**
 - 🟢 **[Sprint 3](file:///home/rafael-dev/Projetos%20Pessoais/nexus-arcade/docs/acceptance-criteria/sprint-3.md)**: Backend Auth & Security (NestJS, JWT, Argon2id, RBAC Guards & Swagger) (`v0.3.0-sprint3`) — **Concluído**
-- 🟡 **Sprint 4**: User Management API & Audit Logs (Admin CRUD & Recovery) — **Em andamento**
-- ⚪ **Sprint 5**: Platforms & Games API + Binary ROM Storage Subsystem
+- 🟢 **[Sprint 4](file:///home/rafael-dev/Projetos%20Pessoais/nexus-arcade/docs/acceptance-criteria/sprint-4.md)**: User Management API & Audit Logs (Admin CRUD & Recovery) (`v0.4.0-sprint4`) — **Concluído**
+- 🟡 **Sprint 5**: Platforms & Games API + Binary ROM Storage Subsystem — **Em andamento**
 - ⚪ **Sprint 6**: Frontend Core Shell (Angular 21, Cyberpunk Theme, Auth & RBAC UX)
 - ⚪ **Sprint 7**: Frontend Library & Admin Dashboards (Management UI)
 - ⚪ **Sprint 8**: WebAssembly Emulator Engine (EmulatorJS & ROM Player)

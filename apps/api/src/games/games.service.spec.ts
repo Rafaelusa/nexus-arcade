@@ -136,7 +136,7 @@ describe('GamesService', () => {
       expect(mockStorageService.saveRom).toHaveBeenCalledWith(mockFile);
       expect(mockAuditService.logAction).toHaveBeenCalledWith(
         'admin-1',
-        'ADMIN_UPLOADED_ROM',
+        'ADMIN_UPLOADED_GAME_ROM',
         'Game',
         'game-1',
         expect.any(Object),

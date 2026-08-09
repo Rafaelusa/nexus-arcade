@@ -31,7 +31,7 @@ export interface AdminGameItem {
         <div class="header-info">
           <span class="badge-admin font-pixel">ADMINISTRATION</span>
           <h1 class="header-title font-heading text-magenta-glow">👾 GERENCIAMENTO DE JOGOS & ROMS</h1>
-          <p class="header-subtitle">Cadastre metadados, faça upload de arquivos binários de ROMs (.sfc, .gba) e capas</p>
+          <p class="header-subtitle">Cadastre metadados, defina capas via Link/Upload e faça gestão dos binários de ROMs</p>
         </div>
 
         <button (click)="showCreateModal.set(true)" class="btn-primary">
@@ -82,7 +82,7 @@ export interface AdminGameItem {
                   💾 Upload ROM
                 </button>
                 <button (click)="openCoverModal(g)" class="btn-action">
-                  🖼️ Upload Capa
+                  🖼️ Definir Capa
                 </button>
                 <button (click)="deleteGame(g)" class="btn-action btn-danger">
                   Excluir
@@ -112,6 +112,12 @@ export interface AdminGameItem {
                   {{ p.name }} ({{ p.code | uppercase }})
                 </option>
               </select>
+            </div>
+
+            <div class="form-group">
+              <label class="font-heading">URL da Capa (Opcional - Link de Imagem Web)</label>
+              <input type="url" [(ngModel)]="newCoverUrl" name="newCoverUrl" class="input-field" placeholder="https://... (Deixe em branco para capa retro automática)" />
+              <span class="input-hint">💡 Se deixado em branco, uma capa retro referente à plataforma será vinculada automaticamente.</span>
             </div>
 
             <div class="form-group">
@@ -160,25 +166,39 @@ export interface AdminGameItem {
         </div>
       </div>
 
-      <!-- Modal de Upload de Capa -->
+      <!-- Modal de Upload / Alteração de Capa -->
       <div class="modal-backdrop" *ngIf="selectedGameForCover()">
         <div class="modal-card glass-panel">
-          <h2 class="modal-title font-heading text-cyan-glow">🖼️ Upload da Imagem de Capa</h2>
+          <h2 class="modal-title font-heading text-cyan-glow">🖼️ Definir Imagem de Capa</h2>
           <p class="modal-sub">Jogo: <strong>{{ selectedGameForCover()?.title }}</strong></p>
 
-          <form (ngSubmit)="uploadCoverFile()" class="modal-form">
+          <div class="modal-form">
+            <!-- Opção 1: Definir por URL de Imagem -->
             <div class="form-group">
-              <label class="font-heading">Selecione a imagem de capa (PNG, JPG, WebP)</label>
+              <label class="font-heading">Opção A: Cole o Link / URL da Imagem</label>
+              <div class="url-input-row">
+                <input type="url" [(ngModel)]="coverUrlInput" class="input-field" placeholder="https://exemplo.com/capa.jpg" />
+                <button type="button" (click)="saveCoverUrl()" [disabled]="!coverUrlInput || isUploading()" class="btn-action btn-rom">
+                  Salvar Link
+                </button>
+              </div>
+            </div>
+
+            <hr class="divider" />
+
+            <!-- Opção 2: Upload de Arquivo Local -->
+            <div class="form-group">
+              <label class="font-heading">Opção B: Upload de Arquivo Local (PNG, JPG, WebP)</label>
               <input type="file" (change)="onCoverFileSelected($event)" class="input-field file-input" />
+              <button type="button" (click)="uploadCoverFile()" [disabled]="!coverFileToUpload || isUploading()" class="btn-primary" style="margin-top: 8px;">
+                {{ isUploading() ? 'Enviando...' : 'Enviar Arquivo Local' }}
+              </button>
             </div>
 
             <div class="modal-actions">
-              <button type="button" (click)="selectedGameForCover.set(null)" class="btn-cancel">Cancelar</button>
-              <button type="submit" [disabled]="!coverFileToUpload || isUploading()" class="btn-primary">
-                {{ isUploading() ? 'Enviando...' : 'Enviar Capa' }}
-              </button>
+              <button type="button" (click)="selectedGameForCover.set(null)" class="btn-cancel">Fechar</button>
             </div>
-          </form>
+          </div>
         </div>
       </div>
     </div>
@@ -356,12 +376,28 @@ export interface AdminGameItem {
       box-sizing: border-box;
     }
 
+    .input-hint {
+      font-size: 11px;
+      color: var(--text-muted);
+    }
+
     .form-row {
       display: grid;
       grid-template-columns: 1fr 1fr;
       gap: 16px;
       width: 100%;
       box-sizing: border-box;
+    }
+
+    .url-input-row {
+      display: flex;
+      gap: 8px;
+    }
+
+    .divider {
+      border: none;
+      border-top: 1px solid rgba(148, 163, 184, 0.15);
+      margin: 4px 0;
     }
 
     .input-field {
@@ -417,10 +453,12 @@ export class AdminGamesComponent implements OnInit {
 
   protected newTitle = '';
   protected newPlatformId = '';
+  protected newCoverUrl = '';
   protected newDescription = '';
   protected newDeveloper = '';
   protected newReleaseYear?: number;
 
+  protected coverUrlInput = '';
   protected romFileToUpload: File | null = null;
   protected coverFileToUpload: File | null = null;
 
@@ -452,6 +490,7 @@ export class AdminGamesComponent implements OnInit {
         title: this.newTitle,
         platformId: this.newPlatformId,
         description: this.newDescription,
+        coverUrl: this.newCoverUrl.trim() || undefined,
         developer: this.newDeveloper,
         releaseYear: this.newReleaseYear ? Number(this.newReleaseYear) : undefined,
       })
@@ -460,6 +499,7 @@ export class AdminGamesComponent implements OnInit {
           this.successMessage.set(`Jogo "${this.newTitle}" cadastrado com sucesso!`);
           this.showCreateModal.set(false);
           this.newTitle = '';
+          this.newCoverUrl = '';
           this.newDescription = '';
           this.newDeveloper = '';
           this.loadGames();
@@ -494,6 +534,7 @@ export class AdminGamesComponent implements OnInit {
 
   openCoverModal(game: AdminGameItem) {
     this.selectedGameForCover.set(game);
+    this.coverUrlInput = game.coverUrl || '';
     this.coverFileToUpload = null;
   }
 
@@ -509,6 +550,28 @@ export class AdminGamesComponent implements OnInit {
     if (file) {
       this.coverFileToUpload = file;
     }
+  }
+
+  saveCoverUrl() {
+    const game = this.selectedGameForCover();
+    if (!game || !this.coverUrlInput) return;
+
+    this.isUploading.set(true);
+    this.errorMessage.set(null);
+    this.successMessage.set(null);
+
+    this.http.patch(`http://localhost:3000/games/${game.id}`, { coverUrl: this.coverUrlInput }).subscribe({
+      next: () => {
+        this.isUploading.set(false);
+        this.successMessage.set(`Link de imagem da capa atualizado com sucesso!`);
+        this.selectedGameForCover.set(null);
+        this.loadGames();
+      },
+      error: (err) => {
+        this.isUploading.set(false);
+        this.errorMessage.set(err.error?.message || 'Erro ao salvar link de imagem.');
+      },
+    });
   }
 
   uploadRomFile() {

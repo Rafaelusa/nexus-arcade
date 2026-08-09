@@ -106,12 +106,27 @@ export class GamesService {
       throw new NotFoundException(`Plataforma com ID "${dto.platformId}" não existe.`);
     }
 
+    const defaultCoversByPlatform: Record<string, string> = {
+      snes: 'https://images.unsplash.com/photo-1612287230202-1ff1d85d1bdf?q=80&w=600&auto=format&fit=crop',
+      gba: 'https://images.unsplash.com/photo-1550745165-9bc0b252726f?q=80&w=600&auto=format&fit=crop',
+      nes: 'https://images.unsplash.com/photo-1538481199705-c710c4e965fc?q=80&w=600&auto=format&fit=crop',
+      megadrive: 'https://images.unsplash.com/photo-1511512578047-dfb367046420?q=80&w=600&auto=format&fit=crop',
+      gb: 'https://images.unsplash.com/photo-1550745165-9bc0b252726f?q=80&w=600&auto=format&fit=crop',
+      gbc: 'https://images.unsplash.com/photo-1550745165-9bc0b252726f?q=80&w=600&auto=format&fit=crop',
+    };
+
+    const fallbackCover =
+      defaultCoversByPlatform[platform.code.toLowerCase()] ||
+      'https://images.unsplash.com/photo-1612287230202-1ff1d85d1bdf?q=80&w=600&auto=format&fit=crop';
+
+    const finalCoverUrl = dto.coverUrl && dto.coverUrl.trim() !== '' ? dto.coverUrl.trim() : fallbackCover;
+
     const game = await this.prisma.game.create({
       data: {
         title: dto.title,
         description: dto.description,
         platformId: dto.platformId,
-        coverUrl: dto.coverUrl,
+        coverUrl: finalCoverUrl,
         releaseYear: dto.releaseYear,
         developer: dto.developer,
         publisher: dto.publisher,
@@ -143,92 +158,88 @@ export class GamesService {
 
     const updatedGame = await this.prisma.game.update({
       where: { id },
-      data: {
-        title: dto.title,
-        description: dto.description,
-        platformId: dto.platformId,
-        coverUrl: dto.coverUrl,
-        releaseYear: dto.releaseYear,
-        developer: dto.developer,
-        publisher: dto.publisher,
-      },
+      data: dto,
       include: {
         platform: true,
       },
     });
 
-    await this.auditService.logAction(adminUserId, 'ADMIN_UPDATED_GAME', 'Game', updatedGame.id);
+    await this.auditService.logAction(adminUserId, 'ADMIN_UPDATED_GAME', 'Game', id, {
+      updatedFields: Object.keys(dto),
+    });
 
     return updatedGame;
   }
 
-  async delete(id: string, adminUserId: string) {
+  async remove(id: string, adminUserId: string) {
     const game = await this.findOne(id);
 
-    // Limpar arquivo de ROM do disco se existir
     if (game.romStorageKey) {
       await this.storageService.deleteRom(game.romStorageKey);
     }
+    if (game.coverUrl && game.coverUrl.startsWith('/storage/covers/')) {
+      await this.storageService.deleteCover(game.coverUrl.replace('/storage/covers/', ''));
+    }
 
-    await this.prisma.game.delete({ where: { id } });
-
-    await this.auditService.logAction(adminUserId, 'ADMIN_DELETED_GAME', 'Game', id, {
-      deletedTitle: game.title,
+    await this.prisma.game.delete({
+      where: { id },
     });
 
-    return { message: `Jogo "${game.title}" e seus arquivos binários foram excluídos com sucesso.` };
+    await this.auditService.logAction(adminUserId, 'ADMIN_DELETED_GAME', 'Game', id, {
+      title: game.title,
+    });
+
+    return { message: `Jogo "${game.title}" removido com sucesso.` };
+  }
+
+  async delete(id: string, adminUserId: string) {
+    return this.remove(id, adminUserId);
   }
 
   async uploadCover(id: string, file: Express.Multer.File, adminUserId: string) {
-    if (!file) {
-      throw new BadRequestException('Nenhum arquivo de imagem foi enviado.');
-    }
-
     const game = await this.findOne(id);
 
-    const { relativeUrl } = await this.storageService.saveCover(file);
+    if (game.coverUrl && game.coverUrl.startsWith('/storage/covers/')) {
+      await this.storageService.deleteCover(game.coverUrl.replace('/storage/covers/', ''));
+    }
+
+    const savedPath = await this.storageService.saveCover(file);
 
     const updatedGame = await this.prisma.game.update({
       where: { id },
-      data: { coverUrl: relativeUrl },
+      data: { coverUrl: savedPath.relativeUrl },
+      include: { platform: true },
     });
 
-    await this.auditService.logAction(adminUserId, 'ADMIN_UPLOADED_COVER', 'Game', id, {
-      coverUrl: relativeUrl,
+    await this.auditService.logAction(adminUserId, 'ADMIN_UPLOADED_GAME_COVER', 'Game', id, {
+      coverUrl: savedPath.relativeUrl,
     });
 
     return updatedGame;
   }
 
   async uploadRom(id: string, file: Express.Multer.File, adminUserId: string) {
-    if (!file) {
-      throw new BadRequestException('Nenhum arquivo de ROM binária foi enviado.');
-    }
-
     const game = await this.findOne(id);
 
-    // Se já existia uma ROM anterior no disco, deletar
     if (game.romStorageKey) {
       await this.storageService.deleteRom(game.romStorageKey);
     }
 
-    // Salvar nova ROM com cálculo de SHA-256 e tamanho em bytes
-    const { storageKey, fileSizeBytes, sha256Hash } = await this.storageService.saveRom(file);
+    const romMetadata = await this.storageService.saveRom(file);
 
     const updatedGame = await this.prisma.game.update({
       where: { id },
       data: {
-        romStorageKey: storageKey,
-        romSize: fileSizeBytes,
-        romHash: sha256Hash,
+        romStorageKey: romMetadata.storageKey,
+        romHash: romMetadata.sha256Hash,
+        romSize: romMetadata.fileSizeBytes,
       },
       include: { platform: true },
     });
 
-    await this.auditService.logAction(adminUserId, 'ADMIN_UPLOADED_ROM', 'Game', id, {
-      romStorageKey: storageKey,
-      romSize: fileSizeBytes,
-      romHash: sha256Hash,
+    await this.auditService.logAction(adminUserId, 'ADMIN_UPLOADED_GAME_ROM', 'Game', id, {
+      romHash: romMetadata.sha256Hash,
+      romSize: romMetadata.fileSizeBytes,
     });
 
     return updatedGame;

@@ -32,9 +32,9 @@ npm run start
       │
       ├── 3. Aguardar disponibilidade do banco (Porta 5432)
       │
-      ├── 4. Sincronizar Prisma Migrations
+      ├── 4. Sincronizar Prisma Migrations (scripts/migrate.js)
       │
-      ├── 5. Executar Seed de dados (Plataforma SNES + Jogo Demo)
+      ├── 5. Executar Seed idempotente de dados (scripts/seed.js)
       │
       ├── 6. Garantir usuário ADMIN inicial com Argon2id
       │
@@ -75,23 +75,40 @@ O sistema possui controle de acesso rigoroso baseado em papéis (*Role-Based Acc
 
 ---
 
+## 🗄️ Estrutura do Banco de Dados (PostgreSQL + Prisma ORM)
+
+O projeto possui **8 tabelas relacionais** modeladas e migradas automaticamente:
+
+| Tabela | Descrição |
+| :--- | :--- |
+| `users` | Cadastro de usuários, papéis (`ADMIN`, `GAMER`), hash Argon2id e avatares. |
+| `platforms` | Plataformas de jogos (ex: SNES, NES, GBA) com códigos únicos e status ativo. |
+| `games` | Catálogo de jogos, metadados, capas e chaves de armazenamento de ROMs. |
+| `user_games` | Associação de favoritos, histórico e tempo de jogo de cada usuário. |
+| `game_sessions` | Registro detalhado de sessões de jogo iniciadas e finalizadas. |
+| `save_states` | Gerenciamento de slots de salvamento de estado com capturas de tela. |
+| `controller_profiles` | Mapeamentos customizados de controles físicos (Gamepad API). |
+| `audit_logs` | Histórico completo de ações administrativas e alterações no sistema. |
+
+---
+
 ## 🛠️ Stack Tecnológica
 
 ### Frontend
 - **Framework**: Angular 21 (Signals, Standalone Components, Control Flow)
-- **Estilização**: CSS Vanilla com Tokens de Design Modernos (Dark Mode / Glassmorphism / Cyberpunk Aesthetic)
+- **Estilização**: CSS Vanilla com Tokens de Design Modernos (Dark Mode / Glassmorphic / Cyberpunk Aesthetic)
 - **State & Async**: RxJS + Angular Signals
 - **Hardware Integration**: Web Gamepad API, IndexedDB
 
 ### Backend
 - **Framework**: NestJS (TypeScript)
-- **ORM & Database**: Prisma ORM + PostgreSQL 16
+- **ORM & Database**: Prisma ORM 6 + PostgreSQL 16
 - **Autenticação & Segurança**: JWT (Access/Refresh Tokens), Argon2id Password Hashing, Helmet, Rate Limiting
 - **Documentação**: OpenAPI / Swagger
 
 ### Emulação & Gaming
 - **Core Engine**: EmulatorJS / RetroArch Cores (WebAssembly)
-- **Binary Storage**: Sistema de armazenamento local de ROMs com validação SHA-256
+- **Binary Storage**: Armazenamento local de ROMs com validação SHA-256
 
 ### Infraestrutura & Qualidade
 - **Containers**: Docker & Docker Compose
@@ -110,7 +127,7 @@ nexus-arcade/
 ├── packages/
 │   └── shared-types/            # Tipos e DTOs compartilhados
 ├── database/
-│   ├── schema.prisma            # Schema do Banco de Dados
+│   ├── schema.prisma            # Schema relacional do Prisma ORM
 │   ├── migrations/              # Histórico de Migrations
 │   └── seed/                    # Seeds (Admin, Roles, SNES Demo)
 ├── storage/
@@ -118,31 +135,29 @@ nexus-arcade/
 │   └── covers/                  # Capas dos Jogos
 ├── scripts/                     # Node.js Bootstrap Scripts
 │   ├── bootstrap.ts             # Script de orquestração do start
-│   ├── wait-for-db.ts           # Aguarda PostgreSQL ficar pronto
-│   ├── migrate.ts               # Executa Prisma Migrations
-│   └── seed.ts                  # Executa os seeds idempotentes
+│   ├── wait-for-db.js           # Aguarda PostgreSQL ficar pronto
+│   ├── migrate.js               # Executa Prisma Migrations
+│   └── seed.js                  # Executa os seeds idempotentes
 ├── docs/                        # Documentação técnica e Critérios de Aceite
 │   └── acceptance-criteria/     # Relatórios por Sprint
-├── docker-compose.yml           # Serviço PostgreSQL
+├── docker-compose.yml           # Serviço PostgreSQL 16
 └── package.json                 # Workspaces & Scripts Raiz
 ```
 
 ---
 
-## 🚀 Sprints de Desenvolvimento
+## 🚀 Progresso das Sprints
 
-```text
-🟡 SPRINT 1 : Monorepo Foundation & One-Command Bootstrap (Em andamento)
-⚪ SPRINT 2 : Database Layer (PostgreSQL, Prisma ORM, Migrations & Seeds)
-⚪ SPRINT 3 : Backend Auth & Security (NestJS, JWT, Argon2id, RBAC Guards)
-⚪ SPRINT 4 : User Management API & Audit Logs (Admin CRUD & Recovery)
-⚪ SPRINT 5 : Platforms & Games API + Binary ROM Storage Subsystem
-⚪ SPRINT 6 : Frontend Core Shell (Angular 21, Cyberpunk Theme, Auth & RBAC UX)
-⚪ SPRINT 7 : Frontend Library & Admin Dashboards (Management UI)
-⚪ SPRINT 8 : WebAssembly Emulator Engine (EmulatorJS & ROM Player)
-⚪ SPRINT 9 : Gamepad API Integration & Save States (Local + Cloud Sync)
-⚪ SPRINT 10: Gamer Statistics Dashboard, Testing Suite & CI/CD Pipeline
-```
+- 🟢 **[Sprint 1](file:///home/rafael-dev/Projetos%20Pessoais/nexus-arcade/docs/acceptance-criteria/sprint-1.md)**: Monorepo Foundation & One-Command Bootstrap (`v0.1.0-sprint1`) — **Concluído**
+- 🟢 **[Sprint 2](file:///home/rafael-dev/Projetos%20Pessoais/nexus-arcade/docs/acceptance-criteria/sprint-2.md)**: Database Layer (PostgreSQL, Prisma ORM, Migrations & Seeds) (`v0.2.0-sprint2`) — **Concluído**
+- 🟡 **Sprint 3**: Backend Auth & Security (NestJS, JWT, Argon2id, RBAC Guards) — **Em andamento**
+- ⚪ **Sprint 4**: User Management API & Audit Logs (Admin CRUD & Recovery)
+- ⚪ **Sprint 5**: Platforms & Games API + Binary ROM Storage Subsystem
+- ⚪ **Sprint 6**: Frontend Core Shell (Angular 21, Cyberpunk Theme, Auth & RBAC UX)
+- ⚪ **Sprint 7**: Frontend Library & Admin Dashboards (Management UI)
+- ⚪ **Sprint 8**: WebAssembly Emulator Engine (EmulatorJS & ROM Player)
+- ⚪ **Sprint 9**: Gamepad API Integration & Save States (Local + Cloud Sync)
+- ⚪ **Sprint 10**: Gamer Statistics Dashboard, Testing Suite & CI/CD Pipeline
 
 ---
 

@@ -1,6 +1,7 @@
 import { NestFactory } from '@nestjs/core';
 import { ValidationPipe } from '@nestjs/common';
 import { SwaggerModule, DocumentBuilder } from '@nestjs/swagger';
+import { json, urlencoded } from 'express';
 import helmet from 'helmet';
 import { AppModule } from './app.module';
 
@@ -15,14 +16,18 @@ async function bootstrap() {
     }),
   );
 
-  // 2. Habilitar CORS para o Frontend Angular
+  // 2. Ajustar limites do Body Parser para suportar Save States em nuvem (Base64 da memória do WebAssembly)
+  app.use(json({ limit: '50mb' }));
+  app.use(urlencoded({ extended: true, limit: '50mb' }));
+
+  // 3. Habilitar CORS para o Frontend Angular
   app.enableCors({
     origin: '*',
     methods: 'GET,HEAD,PUT,PATCH,POST,DELETE,OPTIONS',
     credentials: true,
   });
 
-  // 3. Validação Global de Payloads DTO
+  // 4. Validação Global de Payloads DTO
   app.useGlobalPipes(
     new ValidationPipe({
       whitelist: true,
@@ -34,13 +39,13 @@ async function bootstrap() {
     }),
   );
 
-  // 4. Configurar Documentação OpenAPI / Swagger UI
+  // 5. Configurar Documentação OpenAPI / Swagger UI
   const config = new DocumentBuilder()
     .setTitle('Nexus Arcade API')
     .setDescription(
-      'Documentação técnica interativa da RESTful API do Nexus Arcade, cobrindo Autenticação JWT, RBAC, Catálogo de Jogos e Armazenamento de ROMs.',
+      'Documentação técnica interativa da RESTful API do Nexus Arcade, cobrindo Autenticação JWT, RBAC, Catálogo de Jogos, Armazenamento de ROMs e Save States.',
     )
-    .setVersion('0.3.0-sprint3')
+    .setVersion('0.9.0-sprint9')
     .addBearerAuth(
       {
         type: 'http',

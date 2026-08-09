@@ -61,7 +61,11 @@ export interface PlatformItem {
       <div class="games-grid" *ngIf="games().length > 0; else emptyState">
         <div class="game-card glass-panel" *ngFor="let game of games()">
           <div class="card-cover">
-            <img [src]="game.coverUrl || 'https://images.unsplash.com/photo-1612287230202-1ff1d85d1bdf?q=80&w=400&auto=format&fit=crop'" [alt]="game.title" />
+            <img
+              [src]="game.coverUrl || 'https://images.unsplash.com/photo-1612287230202-1ff1d85d1bdf?q=80&w=400&auto=format&fit=crop'"
+              (error)="onImgError($event, game.platform.code)"
+              [alt]="game.title"
+            />
             <span class="platform-badge font-pixel">{{ game.platform.code | uppercase }}</span>
           </div>
 
@@ -315,5 +319,19 @@ export class LibraryComponent implements OnInit {
 
   playGame(gameId: string) {
     this.router.navigate(['/player', gameId]);
+  }
+
+  onImgError(event: Event, platformCode?: string) {
+    const imgElem = event.target as HTMLImageElement;
+    const defaultCoversByPlatform: Record<string, string> = {
+      snes: 'https://images.unsplash.com/photo-1612287230202-1ff1d85d1bdf?q=80&w=600&auto=format&fit=crop',
+      gba: 'https://images.unsplash.com/photo-1550745165-9bc0b252726f?q=80&w=600&auto=format&fit=crop',
+      nes: 'https://images.unsplash.com/photo-1538481199705-c710c4e965fc?q=80&w=600&auto=format&fit=crop',
+      megadrive: 'https://images.unsplash.com/photo-1511512578047-dfb367046420?q=80&w=600&auto=format&fit=crop',
+      gb: 'https://images.unsplash.com/photo-1550745165-9bc0b252726f?q=80&w=600&auto=format&fit=crop',
+      gbc: 'https://images.unsplash.com/photo-1550745165-9bc0b252726f?q=80&w=600&auto=format&fit=crop',
+    };
+    imgElem.src = (platformCode && defaultCoversByPlatform[platformCode.toLowerCase()]) ||
+      'https://images.unsplash.com/photo-1612287230202-1ff1d85d1bdf?q=80&w=600&auto=format&fit=crop';
   }
 }

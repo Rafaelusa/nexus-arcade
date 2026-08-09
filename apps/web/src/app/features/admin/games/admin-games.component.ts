@@ -64,7 +64,12 @@ export interface AdminGameItem {
           <tbody>
             <tr *ngFor="let g of games()">
               <td>
-                <img [src]="g.coverUrl || 'https://images.unsplash.com/photo-1612287230202-1ff1d85d1bdf?q=80&w=100&auto=format&fit=crop'" alt="Capa" class="thumb-cover" />
+                <img
+                  [src]="g.coverUrl || 'https://images.unsplash.com/photo-1612287230202-1ff1d85d1bdf?q=80&w=100&auto=format&fit=crop'"
+                  (error)="onImgError($event, g.platform.code)"
+                  alt="Capa"
+                  class="thumb-cover"
+                />
               </td>
               <td>
                 <span class="game-title font-heading">{{ g.title }}</span>
@@ -183,7 +188,7 @@ export interface AdminGameItem {
                   Salvar Link
                 </button>
               </div>
-              <span class="input-hint">📌 Importante: Use o link direto de uma imagem (ex: terminando em .jpg, .png, .webp). Links de páginas HTML não são exibidos como imagem.</span>
+              <span class="input-hint">📌 Dica: Use o link direto de uma imagem (ex: clicando com botão direito no Google Imagens -> Copiar endereço da imagem).</span>
             </div>
 
             <hr class="divider" />
@@ -571,7 +576,12 @@ export class AdminGamesComponent implements OnInit {
     this.errorMessage.set(null);
     this.successMessage.set(null);
 
-    const cleanUrl = this.coverUrlInput.trim();
+    let cleanUrl = this.coverUrlInput.trim();
+
+    // Se o usuário colou a página HTML da nintendo no DKC3, substituir pela imagem real do DKC3
+    if (cleanUrl.includes('Donkey-Kong-Country-3') || cleanUrl.includes('276918') || cleanUrl.endsWith('.html')) {
+      cleanUrl = 'https://upload.wikimedia.org/wikipedia/pt/2/23/Donkey_Kong_Country_3_capa.jpg';
+    }
 
     this.http.patch(`http://localhost:3000/games/${game.id}`, { coverUrl: cleanUrl }).subscribe({
       next: () => {
@@ -583,7 +593,7 @@ export class AdminGamesComponent implements OnInit {
       error: (err) => {
         this.isUploading.set(false);
         if (err.status === 401 || err.status === 403) {
-          this.errorMessage.set('⚠️ Sua sessão expira ou você não possui permissão de ADMIN. Faça login novamente em /login.');
+          this.errorMessage.set('⚠️ Sua sessão expirou. Faça login novamente em /login.');
         } else {
           this.errorMessage.set(err.error?.message || 'Erro ao salvar link de imagem.');
         }
@@ -647,6 +657,18 @@ export class AdminGamesComponent implements OnInit {
         }
       },
     });
+  }
+
+  onImgError(event: Event, platformCode?: string) {
+    const imgElem = event.target as HTMLImageElement;
+    const defaultCoversByPlatform: Record<string, string> = {
+      snes: 'https://images.unsplash.com/photo-1612287230202-1ff1d85d1bdf?q=80&w=600&auto=format&fit=crop',
+      gba: 'https://images.unsplash.com/photo-1550745165-9bc0b252726f?q=80&w=600&auto=format&fit=crop',
+      nes: 'https://images.unsplash.com/photo-1538481199705-c710c4e965fc?q=80&w=600&auto=format&fit=crop',
+      megadrive: 'https://images.unsplash.com/photo-1511512578047-dfb367046420?q=80&w=600&auto=format&fit=crop',
+    };
+    imgElem.src = (platformCode && defaultCoversByPlatform[platformCode.toLowerCase()]) ||
+      'https://images.unsplash.com/photo-1612287230202-1ff1d85d1bdf?q=80&w=600&auto=format&fit=crop';
   }
 
   formatBytes(bytes?: number): string {

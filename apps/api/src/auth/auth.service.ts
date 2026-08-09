@@ -1,4 +1,4 @@
-import { Injectable, ConflictException, UnauthorizedException, BadRequestException } from '@nestjs/common';
+import { Injectable, ConflictException, UnauthorizedException, BadRequestException, ForbiddenException } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import * as argon2 from 'argon2';
 import { PrismaService } from '../database/prisma.service';
@@ -54,7 +54,7 @@ export class AuthService {
       },
     });
 
-    // 4. Gerar tokens JWT
+    // 4. Gerar tokens JWT (8 horas de expiração)
     const tokens = await this.generateTokens(user.id, user.email, user.role);
 
     return {
@@ -69,23 +69,24 @@ export class AuthService {
       where: { email: dto.email },
     });
 
+    // 10. Mensagem padronizada contra enunciação de usuários
     if (!user) {
-      throw new UnauthorizedException('Credenciais de acesso inválidas.');
+      throw new UnauthorizedException('Usuário ou senha incorretos.');
     }
 
-    // 2. Verificar se usuário está bloqueado
+    // 8. Mensageria detalhada para conta bloqueada por Admin
     if (user.isBlocked) {
-      throw new UnauthorizedException('Esta conta de usuário foi bloqueada pelo administrador.');
+      throw new ForbiddenException('Esta conta de usuário foi bloqueada por um Administrador. Entre em contato com o suporte.');
     }
 
     // 3. Verificar hash da senha com Argon2id
     const isPasswordValid = await argon2.verify(user.passwordHash, dto.password);
 
     if (!isPasswordValid) {
-      throw new UnauthorizedException('Credenciais de acesso inválidas.');
+      throw new UnauthorizedException('Usuário ou senha incorretos.');
     }
 
-    // 4. Gerar tokens JWT
+    // 7. Gerar tokens JWT com sessão de 8 horas de expiração
     const tokens = await this.generateTokens(user.id, user.email, user.role);
 
     const { passwordHash: _, ...safeUser } = user;
@@ -113,12 +114,58 @@ export class AuthService {
 
       const accessToken = await this.jwtService.signAsync(
         { sub: user.id, email: user.email, role: user.role },
-        { expiresIn: '1h' }
+        { expiresIn: '8h' },
       );
 
       return { accessToken };
     } catch (error) {
       throw new UnauthorizedException('Refresh token inválido ou expirado.');
+    }
+  }
+
+  async forgotPassword(email: string) {
+    const user = await this.prisma.user.findUnique({ where: { email } });
+
+    // Mensagem genérica segura padronizada (Item 10)
+    if (!user || user.isBlocked) {
+      return {
+        message: 'Se o e-mail informado estiver ativo, um token de recuperação foi gerado com sucesso.',
+      };
+    }
+
+    const resetToken = await this.jwtService.signAsync(
+      { sub: user.id, email: user.email, purpose: 'password_reset' },
+      { expiresIn: '15m' },
+    );
+
+    return {
+      message: 'Se o e-mail informado estiver ativo, um token de recuperação foi gerado com sucesso.',
+      resetToken,
+    };
+  }
+
+  async resetPassword(resetToken: string, newPassword: string) {
+    try {
+      const payload = await this.jwtService.verifyAsync(resetToken, {
+        secret: process.env.JWT_SECRET || 'super_secret_nexus_jwt_key',
+      });
+
+      if (payload.purpose !== 'password_reset') {
+        throw new BadRequestException('Token de redefinição inválido.');
+      }
+
+      const newPasswordHash = await argon2.hash(newPassword, {
+        type: argon2.argon2id,
+      });
+
+      await this.prisma.user.update({
+        where: { id: payload.sub },
+        data: { passwordHash: newPasswordHash },
+      });
+
+      return { message: 'Senha redefinida com sucesso com criptografia Argon2id!' };
+    } catch (error) {
+      throw new BadRequestException('Token de redefinição expirado ou inválido.');
     }
   }
 
@@ -148,7 +195,7 @@ export class AuthService {
     const payload = { sub: userId, email, role };
 
     const [accessToken, refreshToken] = await Promise.all([
-      this.jwtService.signAsync(payload, { expiresIn: '1h' }),
+      this.jwtService.signAsync(payload, { expiresIn: '8h' }),
       this.jwtService.signAsync(payload, { expiresIn: '7d' }),
     ]);
 

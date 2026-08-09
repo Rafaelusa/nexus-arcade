@@ -8,11 +8,16 @@ import { AppModule } from './app.module';
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
 
-  // 1. Aplicar cabeçalhos de segurança HTTP com Helmet
+  // 1. Aplicar cabeçalhos de segurança HTTP com Helmet & HSTS HTTPS (Item 11)
   app.use(
     helmet({
       crossOriginEmbedderPolicy: false,
       contentSecurityPolicy: false,
+      hsts: {
+        maxAge: 31536000,
+        includeSubDomains: true,
+        preload: true,
+      },
     }),
   );
 
@@ -43,9 +48,9 @@ async function bootstrap() {
   const config = new DocumentBuilder()
     .setTitle('Nexus Arcade API')
     .setDescription(
-      'Documentação técnica interativa da RESTful API do Nexus Arcade, cobrindo Autenticação JWT, RBAC, Catálogo de Jogos, Armazenamento de ROMs e Save States.',
+      'Documentação técnica interativa da RESTful API do Nexus Arcade, cobrindo Autenticação JWT com 8h, RBAC, Rate Limiting, Catálogo de Jogos, Armazenamento de ROMs e Save States.',
     )
-    .setVersion('0.9.0-sprint9')
+    .setVersion('1.0.0-release')
     .addBearerAuth(
       {
         type: 'http',

@@ -1,10 +1,36 @@
 # 🎮 NEXUS ARCADE
 
 > **Your games. Your library. Your world.**
+> 
+> *Desenvolvido por **Dev Rafael Ribeiro** como um projeto de demonstração de Arquitetura Full Stack High Performance para Portfólio.*
 
-Plataforma web Full Stack para gerenciamento, organização e execução de jogos clássicos diretamente no navegador.
+---
 
-O **Nexus Arcade** combina uma interface inspirada em **dashboards empresariais**, estética **anime/retro/cyberpunk** e uma arquitetura Full Stack moderna com **Angular 21**, **NestJS**, **PostgreSQL**, **Prisma ORM**, **Docker**, **WebAssembly**, **EmulatorJS** e **Gamepad API**.
+## 🎯 Objetivo & Visão Geral do Projeto
+
+O **Nexus Arcade** é um **Hub Centralizado de Jogos Retro Online na Nuvem**.
+
+Diferente de emuladores tradicionais ou aplicativos desktop que exigem que cada usuário baixe softwares, instale plugins ou faça dumps manuais de arquivos binários no seu computador, o **Nexus Arcade roda 100% online no navegador web**:
+
+1. **Sem Downloads ou Instalação**: O usuário simplesmente acessa o portal, escolhe qualquer jogo disponível no catálogo e joga instantaneamente com 1 clique.
+2. **Emulação de Alta Performance com WebAssembly**: A emulação dos consoles (SNES, NES, GBA, Mega Drive, Game Boy) é processada no navegador através dos motores WebAssembly (cores do EmulatorJS / RetroArch).
+3. **Save States na Nuvem**: O progresso é salvo no banco PostgreSQL em tempo real e pode ser retomado em qualquer dispositivo.
+4. **Suporte Nativo a Gamepads Físicos**: Integração direta com a **Gamepad API** do navegador para reconhecer controles de Xbox, PlayStation, Nintendo Switch Pro ou USB genérico sem configurações.
+5. **Gestão Centralizada (Conta Admin)**: Administradores gerenciam a plataforma, cadastram novos consoles, sobem jogos, editam metadados e gerenciam permissões de usuários.
+
+---
+
+## 🔒 Arquitetura de Segurança & Proteção de Dados
+
+A plataforma implementa práticas de segurança de nível corporativo:
+
+- **Tokens JWT de 8 Horas (`8h`)**: Sessão contínua de trabalho e gameplay com renovação via Refresh Token.
+- **Proteção contra Força Bruta & Rate Limiting (`@nestjs/throttler`)**: Limite de 100 requisições por minuto por IP para prevenir ataques de força bruta.
+- **Mensageria Segura Anti-Enumeração**: Mensagens padronizadas (*"Usuário ou senha incorretos."*) que não revelam a existência prévia do e-mail no banco de dados.
+- **Detecção & Mensageria de Conta Bloqueada**: Alerta explicito e bloqueio imediato (*"Esta conta de usuário foi bloqueada por um Administrador. Entre em contato com o suporte."*).
+- **Redefinição Segura de Senha**: Endpoints `POST /auth/forgot-password` e `POST /auth/reset-password` com tokens assinados digitalmente e expiração de 15 minutos.
+- **Criptografia de Senhas com Argon2id**: Senhas armazenadas com o algoritmo Argon2id resistente a GPU e ataques Rainbow Table.
+- **Cabeçalhos de Segurança HTTP & HTTPS (`Helmet + HSTS`)**: Inclusão de `Strict-Transport-Security: max-age=31536000; includeSubDomains; preload` para forçar tráfego criptografado HTTPS.
 
 ---
 
@@ -12,7 +38,7 @@ O **Nexus Arcade** combina uma interface inspirada em **dashboards empresariais*
 
 > **"Clone, install, start and develop."**
 
-Sem passos manuais para configurar banco de dados, usuários, tabelas ou servidores. Um único comando prepara e inicializa todo o ecossistema:
+Um único comando orquestra o banco PostgreSQL no Docker, executa migrations, roda os seeds idempotentes do Prisma e inicia a API NestJS e o app Angular 21:
 
 ```bash
 git clone https://github.com/Rafaelusa/nexus-arcade.git
@@ -21,74 +47,33 @@ npm install
 npm run start
 ```
 
-### 🔄 Fluxo do `npm run start`
-
-```text
-npm run start
-      │
-      ├── 1. Verificar ambiente (Node.js & Docker)
-      │
-      ├── 2. Subir PostgreSQL (Docker Compose)
-      │
-      ├── 3. Aguardar disponibilidade do banco (Porta 5432)
-      │
-      ├── 4. Sincronizar Prisma Migrations (scripts/migrate.js)
-      │
-      ├── 5. Executar Seed idempotente de dados (scripts/seed.js)
-      │
-      ├── 6. Garantir usuário ADMIN inicial com Argon2id
-      │
-      ├── 7. Iniciar NestJS (Backend API - Port 3000)
-      │
-      └── 8. Iniciar Angular (Frontend App - Port 4200)
-```
-
 ### 📍 Serviços Disponíveis
 
 | Serviço | URL / Endereço | Descrição |
 | :--- | :--- | :--- |
-| **Frontend Angular** | `http://localhost:4200` | App com Dashboard Cyberpunk / Game Library |
-| **Backend NestJS** | `http://localhost:3000` | API RESTful com RBAC, JWT e File Storage |
+| **Frontend Angular 21** | `http://localhost:4200` | App Cyberpunk com Lazy Loading e Gamepad API |
+| **Backend NestJS API** | `http://localhost:3000` | API RESTful com RBAC, Rate Limit, JWT 8h e Argon2id |
 | **API Docs (Swagger)** | `http://localhost:3000/api/docs` | Documentação interativa da API (OpenAPI) |
-| **PostgreSQL Database** | `localhost:5432` | Banco de dados relacional executado no Docker |
+| **PostgreSQL Database** | `localhost:5432` | Banco de dados relacional no Docker Compose |
 
 ---
 
 ## 🛡️ Matriz de Permissões (RBAC)
 
-O sistema possui controle de acesso rigoroso baseado em papéis (*Role-Based Access Control*), validados **sempre no Backend** através de Guards do NestJS (`JwtAuthGuard` + `RolesGuard`) e no **Frontend** via Angular `roleGuard` & UI adaptativa:
-
 | Recurso / Funcionalidade | GAMER | ADMIN |
 | :--- | :---: | :---: |
-| Visualizar Dashboard & Biblioteca | ✅ | ✅ |
+| Visualizar Dashboard & Consoles Ativos | ✅ | ✅ |
 | Buscar & Filtrar Jogos por Plataforma | ✅ | ✅ |
 | Executar Jogos no Navegador (WebAssembly) | ✅ | ✅ |
-| Conectar Controles Físicos (Gamepad API) | ✅ | ✅ |
-| Gerenciar Save States (IndexedDB & Nuvem) | ✅ | ✅ |
-| Favoritar Jogos & Ver Estatísticas | ✅ | ✅ |
-| Gerenciar Perfil Pessoal | ✅ | ✅ |
-| **Gerenciar Usuários (Listar, Criar, Editar, Excluir, Bloquear)** | ❌ | ✅ |
-| **Gerenciar Jogos (Criar, Editar, Remover metadados)** | ❌ | ✅ |
-| **Upload & Substituição de ROMs (Armazenamento Binário)** | ❌ | ✅ |
-| **Gerenciar Plataformas (SNES, NES, GBA, etc.)** | ❌ | ✅ |
+| Conectar Controles Físicos (Gamepad API no Header) | ✅ | ✅ |
+| Gerenciar Save States (Nuvem PostgreSQL) | ✅ | ✅ |
+| Favoritar Jogos & Histórico de Partidas | ✅ | ✅ |
+| Gerenciar Perfil Pessoal & Troca de Senha | ✅ | ✅ |
+| **Gerenciar Usuários (Listar, Bloquear, Excluir)** | ❌ | ✅ |
+| **Gerenciar Metadados dos Jogos (Criar, Editar, Excluir)** | ❌ | ✅ |
+| **Upload de Capas via Link/Arquivo e ROMs (SHA-256)** | ❌ | ✅ |
+| **Gerenciar Plataformas (Criar, Editar informações, Ativar/Desativar)** | ❌ | ✅ |
 | **Logs de Auditoria do Sistema** | ❌ | ✅ |
-
----
-
-## 🗄️ Estrutura do Banco de Dados (PostgreSQL + Prisma ORM)
-
-O projeto possui **8 tabelas relacionais** modeladas e migradas automaticamente:
-
-| Tabela | Descrição |
-| :--- | :--- |
-| `users` | Cadastro de usuários, papéis (`ADMIN`, `GAMER`), hash Argon2id e avatares. |
-| `platforms` | Plataformas de jogos (ex: SNES, NES, GBA) com códigos únicos e status ativo. |
-| `games` | Catálogo de jogos, metadados, capas e chaves de armazenamento de ROMs. |
-| `user_games` | Associação de favoritos, histórico e tempo de jogo de cada usuário. |
-| `game_sessions` | Registro detalhado de sessões de jogo iniciadas e finalizadas. |
-| `save_states` | Gerenciamento de slots de salvamento de estado com capturas de tela. |
-| `controller_profiles` | Mapeamentos customizados de controles físicos (Gamepad API). |
-| `audit_logs` | Histórico completo de ações administrativas e alterações no sistema. |
 
 ---
 
@@ -96,78 +81,19 @@ O projeto possui **8 tabelas relacionais** modeladas e migradas automaticamente:
 
 ### Frontend
 - **Framework**: Angular 21 (Signals, Standalone Components, Control Flow)
-- **Estilização**: CSS Vanilla com Tokens de Design Modernos (Dark Mode / Glassmorphic / Cyberpunk Aesthetic)
-- **State & Async**: RxJS + Angular 21 Signals Reativos
-- **Segurança**: Functional `authInterceptor`, `authGuard` & `roleGuard`
-- **Management UI**: Dashboards de Usuários, Jogos, Upload de ROMs com SHA-256, Capas e Auditoria
-- **Hardware Integration**: Web Gamepad API (Toast HUD), Save States Cloud Sync
+- **Performance**: Lazy Loading de Rotas (`loadComponent`) dividindo a aplicação em chunks sob demanda (Redução do bundle inicial para 283 kB)
+- **Estilização**: CSS Vanilla com Tokens de Design Cyberpunk / Dark Glassmorphism
+- **Hardware Integration**: Web Gamepad API (Badge no topo do cabeçalho com detecção dinâmica de Xbox, PlayStation, Switch Pro e Gamepads genéricos)
 
 ### Backend
-- **Framework**: NestJS (TypeScript)
+- **Framework**: NestJS 11 (TypeScript)
 - **ORM & Database**: Prisma ORM 6 + PostgreSQL 16
-- **Autenticação & Segurança**: JWT (Access & Refresh Tokens), Argon2id Password Hashing, Helmet, Rate Limiting
+- **Segurança**: JWT (Expiração de 8h), Argon2id, NestJS Throttler Rate Limiting, Helmet com HSTS HTTPS, Validação DTO com Class-Validator
 - **Documentação**: OpenAPI / Swagger UI
-- **Armazenamento Binário**: SHA-256 Hash Verification & ROM Streaming
-
-### Emulação & Gaming
-- **Core Engine**: EmulatorJS / RetroArch Cores (WebAssembly)
-- **Binary Storage**: Armazenamento local de ROMs com validação SHA-256
-
-### Infraestrutura & Qualidade
-- **Containers**: Docker & Docker Compose
-- **Workspaces**: `npm workspaces` Monorepo
-- **CI/CD Pipeline**: GitHub Actions (`.github/workflows/ci.yml`)
-- **Testes**: Jest (22 Testes Unitários Automatizados no Backend com 100% de Aprovação)
+- **Armazenamento Binário**: Hash Verification SHA-256 & ROM Streaming (Body Parser 50MB)
 
 ---
 
-## 📂 Estrutura do Monorepo
+## 📜 Licença & Autoria
 
-```text
-nexus-arcade/
-├── .github/
-│   └── workflows/
-│       └── ci.yml               # Pipeline de CI/CD GitHub Actions
-├── apps/
-│   ├── web/                     # Frontend Angular 21 (Library, Admin Dashboards, WebAssembly Player, Gamepad API)
-│   └── api/                     # Backend NestJS API (Auth, Users, Platforms, Games, Storage, Saves, Stats)
-├── packages/
-│   └── shared-types/            # Tipos e DTOs compartilhados
-├── database/
-│   ├── schema.prisma            # Schema relacional do Prisma ORM
-│   ├── migrations/              # Histórico de Migrations
-│   └── seed/                    # Seeds (Admin, Roles, SNES Demo)
-├── storage/
-│   ├── roms/                    # Armazenamento binário de ROMs com SHA-256
-│   └── covers/                  # Capas dos Jogos
-├── scripts/                     # Node.js Bootstrap Scripts
-│   ├── bootstrap.ts             # Script de orquestração do start
-│   ├── wait-for-db.js           # Aguarda PostgreSQL ficar pronto
-│   ├── migrate.js               # Executa Prisma Migrations
-│   └── seed.js                  # Executa os seeds idempotentes
-├── docs/                        # Documentação técnica e Critérios de Aceite
-│   └── acceptance-criteria/     # Relatórios por Sprint (Sprints 1 a 10)
-├── docker-compose.yml           # Serviço PostgreSQL 16
-└── package.json                 # Workspaces & Scripts Raiz
-```
-
----
-
-## 🚀 Progresso das Sprints (100% Concluído - Release v1.0.0)
-
-- 🟢 **[Sprint 1](file:///home/rafael-dev/Projetos%20Pessoais/nexus-arcade/docs/acceptance-criteria/sprint-1.md)**: Monorepo Foundation & One-Command Bootstrap (`v0.1.0-sprint1`) — **Concluído**
-- 🟢 **[Sprint 2](file:///home/rafael-dev/Projetos%20Pessoais/nexus-arcade/docs/acceptance-criteria/sprint-2.md)**: Database Layer (PostgreSQL, Prisma ORM, Migrations & Seeds) (`v0.2.0-sprint2`) — **Concluído**
-- 🟢 **[Sprint 3](file:///home/rafael-dev/Projetos%20Pessoais/nexus-arcade/docs/acceptance-criteria/sprint-3.md)**: Backend Auth & Security (NestJS, JWT, Argon2id, RBAC Guards & Swagger) (`v0.3.0-sprint3`) — **Concluído**
-- 🟢 **[Sprint 4](file:///home/rafael-dev/Projetos%20Pessoais/nexus-arcade/docs/acceptance-criteria/sprint-4.md)**: User Management API & Audit Logs (Admin CRUD & Recovery) (`v0.4.0-sprint4`) — **Concluído**
-- 🟢 **[Sprint 5](file:///home/rafael-dev/Projetos%20Pessoais/nexus-arcade/docs/acceptance-criteria/sprint-5.md)**: Platforms & Games API + Binary ROM Storage Subsystem (`v0.5.0-sprint5`) — **Concluído**
-- 🟢 **[Sprint 6](file:///home/rafael-dev/Projetos%20Pessoais/nexus-arcade/docs/acceptance-criteria/sprint-6.md)**: Frontend Core Shell (Angular 21, Cyberpunk Theme, Auth & RBAC UX) (`v0.6.0-sprint6`) — **Concluído**
-- 🟢 **[Sprint 7](file:///home/rafael-dev/Projetos%20Pessoais/nexus-arcade/docs/acceptance-criteria/sprint-7.md)**: Frontend Library & Admin Dashboards (Management UI) (`v0.7.0-sprint7`) — **Concluído**
-- 🟢 **[Sprint 8](file:///home/rafael-dev/Projetos%20Pessoais/nexus-arcade/docs/acceptance-criteria/sprint-8.md)**: WebAssembly Emulator Engine (EmulatorJS & ROM Player) (`v0.8.0-sprint8`) — **Concluído**
-- 🟢 **[Sprint 9](file:///home/rafael-dev/Projetos%20Pessoais/nexus-arcade/docs/acceptance-criteria/sprint-9.md)**: Gamepad API Integration & Save States (Local + Cloud Sync) (`v0.9.0-sprint9`) — **Concluído**
-- 🟢 **[Sprint 10](file:///home/rafael-dev/Projetos%20Pessoais/nexus-arcade/docs/acceptance-criteria/sprint-10.md)**: Gamer Statistics Dashboard, Testing Suite & CI/CD Pipeline (`v1.0.0-sprint10`) — **Concluído (RELEASE v1.0.0)**
-
----
-
-## 📜 Licença
-
-Desenvolvido para fins educacionais e de demonstração de arquitetura Full Stack de alto desempenho.
+Projeto concebido e desenvolvido por **Dev Rafael Ribeiro** para fins de portfólio de arquitetura de software e engenharia Full Stack.

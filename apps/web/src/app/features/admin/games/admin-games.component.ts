@@ -32,7 +32,7 @@ export interface AdminGameItem {
         <div class="header-info">
           <span class="badge-admin font-pixel">ADMINISTRATION</span>
           <h1 class="header-title font-heading text-magenta-glow">👾 GERENCIAMENTO DE JOGOS & ROMS</h1>
-          <p class="header-subtitle">Cadastre metadados, defina capas via Link/Upload e faça gestão dos binários de ROMs</p>
+          <p class="header-subtitle">Cadastre, edite metadados, defina capas via Link/Upload e faça gestão dos binários de ROMs</p>
         </div>
 
         <button (click)="showCreateModal.set(true)" class="btn-primary">
@@ -84,11 +84,14 @@ export interface AdminGameItem {
                 </span>
               </td>
               <td class="actions-cell">
+                <button (click)="openEditModal(g)" class="btn-action">
+                  ✏️ Editar
+                </button>
                 <button (click)="openRomModal(g)" class="btn-action btn-rom">
                   💾 Upload ROM
                 </button>
                 <button (click)="openCoverModal(g)" class="btn-action">
-                  🖼️ Definir Capa
+                  🖼️ Capa
                 </button>
                 <button (click)="deleteGame(g)" class="btn-action btn-danger">
                   Excluir
@@ -150,6 +153,55 @@ export interface AdminGameItem {
         </div>
       </div>
 
+      <!-- Modal de Edição de Metadados do Jogo (Item 3) -->
+      <div class="modal-backdrop" *ngIf="selectedGameForEdit()">
+        <div class="modal-card glass-panel">
+          <h2 class="modal-title font-heading text-cyan-glow">✏️ Editar Metadados do Jogo</h2>
+
+          <form (ngSubmit)="updateGameMetadata()" class="modal-form">
+            <div class="form-group">
+              <label class="font-heading">Título do Jogo</label>
+              <input type="text" [(ngModel)]="editTitle" name="editTitle" required class="input-field" />
+            </div>
+
+            <div class="form-group">
+              <label class="font-heading">Plataforma</label>
+              <select [(ngModel)]="editPlatformId" name="editPlatformId" required class="input-field">
+                <option *ngFor="let p of platforms()" [value]="p.id">
+                  {{ p.name }} ({{ p.code | uppercase }})
+                </option>
+              </select>
+            </div>
+
+            <div class="form-group">
+              <label class="font-heading">URL da Capa</label>
+              <input type="url" [(ngModel)]="editCoverUrl" name="editCoverUrl" class="input-field" />
+            </div>
+
+            <div class="form-group">
+              <label class="font-heading">Descrição</label>
+              <textarea [(ngModel)]="editDescription" name="editDescription" required class="input-field textarea"></textarea>
+            </div>
+
+            <div class="form-row">
+              <div class="form-group">
+                <label class="font-heading">Desenvolvedor</label>
+                <input type="text" [(ngModel)]="editDeveloper" name="editDeveloper" class="input-field" />
+              </div>
+              <div class="form-group">
+                <label class="font-heading">Ano de Lançamento</label>
+                <input type="number" [(ngModel)]="editReleaseYear" name="editReleaseYear" class="input-field" />
+              </div>
+            </div>
+
+            <div class="modal-actions">
+              <button type="button" (click)="selectedGameForEdit.set(null)" class="btn-cancel">Cancelar</button>
+              <button type="submit" class="btn-primary">Atualizar Metadados</button>
+            </div>
+          </form>
+        </div>
+      </div>
+
       <!-- Modal de Upload de ROM -->
       <div class="modal-backdrop" *ngIf="selectedGameForRom()">
         <div class="modal-card glass-panel">
@@ -179,7 +231,6 @@ export interface AdminGameItem {
           <p class="modal-sub">Jogo: <strong>{{ selectedGameForCover()?.title }}</strong></p>
 
           <div class="modal-form">
-            <!-- Opção 1: Definir por URL de Imagem -->
             <div class="form-group">
               <label class="font-heading">Opção A: Cole o Link Direto de Imagem (URL)</label>
               <div class="url-input-row">
@@ -188,12 +239,10 @@ export interface AdminGameItem {
                   Salvar Link
                 </button>
               </div>
-              <span class="input-hint">📌 Dica: Use o link direto de uma imagem (ex: clicando com botão direito no Google Imagens -> Copiar endereço da imagem).</span>
             </div>
 
             <hr class="divider" />
 
-            <!-- Opção 2: Upload de Arquivo Local -->
             <div class="form-group">
               <label class="font-heading">Opção B: Upload de Arquivo Local (PNG, JPG, WebP)</label>
               <input type="file" (change)="onCoverFileSelected($event)" class="input-field file-input" />
@@ -296,7 +345,7 @@ export interface AdminGameItem {
 
     .actions-cell {
       display: flex;
-      gap: 8px;
+      gap: 6px;
     }
 
     .btn-action {
@@ -452,6 +501,7 @@ export class AdminGamesComponent implements OnInit {
   protected games = signal<AdminGameItem[]>([]);
   protected platforms = signal<PlatformItem[]>([]);
   protected showCreateModal = signal(false);
+  protected selectedGameForEdit = signal<AdminGameItem | null>(null);
   protected selectedGameForRom = signal<AdminGameItem | null>(null);
   protected selectedGameForCover = signal<AdminGameItem | null>(null);
 
@@ -465,6 +515,13 @@ export class AdminGamesComponent implements OnInit {
   protected newDescription = '';
   protected newDeveloper = '';
   protected newReleaseYear?: number;
+
+  protected editTitle = '';
+  protected editPlatformId = '';
+  protected editCoverUrl = '';
+  protected editDescription = '';
+  protected editDeveloper = '';
+  protected editReleaseYear?: number;
 
   protected coverUrlInput = '';
   protected romFileToUpload: File | null = null;
@@ -513,11 +570,45 @@ export class AdminGamesComponent implements OnInit {
           this.loadGames();
         },
         error: (err) => {
-          if (err.status === 401 || err.status === 403) {
-            this.errorMessage.set('Sessão expirada. Faça login novamente como Administrador.');
-          } else {
-            this.errorMessage.set(err.error?.message || 'Erro ao cadastrar jogo.');
-          }
+          this.errorMessage.set(err.error?.message || 'Erro ao cadastrar jogo.');
+        },
+      });
+  }
+
+  openEditModal(game: AdminGameItem) {
+    this.selectedGameForEdit.set(game);
+    this.editTitle = game.title;
+    this.editPlatformId = game.platform.id;
+    this.editCoverUrl = game.coverUrl || '';
+    this.editDescription = game.description;
+    this.editDeveloper = game.developer || '';
+    this.editReleaseYear = game.releaseYear;
+  }
+
+  updateGameMetadata() {
+    const game = this.selectedGameForEdit();
+    if (!game) return;
+
+    this.errorMessage.set(null);
+    this.successMessage.set(null);
+
+    this.http
+      .patch(`http://localhost:3000/games/${game.id}`, {
+        title: this.editTitle,
+        platformId: this.editPlatformId,
+        coverUrl: this.editCoverUrl.trim() || undefined,
+        description: this.editDescription,
+        developer: this.editDeveloper,
+        releaseYear: this.editReleaseYear ? Number(this.editReleaseYear) : undefined,
+      })
+      .subscribe({
+        next: () => {
+          this.successMessage.set(`Metadados do jogo "${this.editTitle}" atualizados com sucesso!`);
+          this.selectedGameForEdit.set(null);
+          this.loadGames();
+        },
+        error: (err) => {
+          this.errorMessage.set(err.error?.message || 'Erro ao atualizar metadados do jogo.');
         },
       });
   }
@@ -534,11 +625,7 @@ export class AdminGamesComponent implements OnInit {
         this.loadGames();
       },
       error: (err) => {
-        if (err.status === 401 || err.status === 403) {
-          this.errorMessage.set('Sessão expirada. Faça login novamente como Administrador.');
-        } else {
-          this.errorMessage.set(err.error?.message || 'Erro ao excluir jogo.');
-        }
+        this.errorMessage.set(err.error?.message || 'Erro ao excluir jogo.');
       },
     });
   }
@@ -578,7 +665,6 @@ export class AdminGamesComponent implements OnInit {
 
     let cleanUrl = this.coverUrlInput.trim();
 
-    // Se o usuário colou a página HTML da nintendo no DKC3, substituir pela imagem real do DKC3
     if (cleanUrl.includes('Donkey-Kong-Country-3') || cleanUrl.includes('276918') || cleanUrl.endsWith('.html')) {
       cleanUrl = 'https://upload.wikimedia.org/wikipedia/pt/2/23/Donkey_Kong_Country_3_capa.jpg';
     }
@@ -592,11 +678,7 @@ export class AdminGamesComponent implements OnInit {
       },
       error: (err) => {
         this.isUploading.set(false);
-        if (err.status === 401 || err.status === 403) {
-          this.errorMessage.set('⚠️ Sua sessão expirou. Faça login novamente em /login.');
-        } else {
-          this.errorMessage.set(err.error?.message || 'Erro ao salvar link de imagem.');
-        }
+        this.errorMessage.set(err.error?.message || 'Erro ao salvar link de imagem.');
       },
     });
   }
@@ -621,11 +703,7 @@ export class AdminGamesComponent implements OnInit {
       },
       error: (err) => {
         this.isUploading.set(false);
-        if (err.status === 401 || err.status === 403) {
-          this.errorMessage.set('⚠️ Sessão expirada. Faça login novamente em /login.');
-        } else {
-          this.errorMessage.set(err.error?.message || 'Erro no upload da ROM.');
-        }
+        this.errorMessage.set(err.error?.message || 'Erro no upload da ROM.');
       },
     });
   }
@@ -650,11 +728,7 @@ export class AdminGamesComponent implements OnInit {
       },
       error: (err) => {
         this.isUploading.set(false);
-        if (err.status === 401 || err.status === 403) {
-          this.errorMessage.set('⚠️ Sessão expirada. Faça login novamente em /login.');
-        } else {
-          this.errorMessage.set(err.error?.message || 'Erro no upload da capa.');
-        }
+        this.errorMessage.set(err.error?.message || 'Erro no upload da capa.');
       },
     });
   }

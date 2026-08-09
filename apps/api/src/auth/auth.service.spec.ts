@@ -2,7 +2,7 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { JwtService } from '@nestjs/jwt';
 import { AuthService } from './auth.service';
 import { PrismaService } from '../database/prisma.service';
-import { ConflictException, UnauthorizedException } from '@nestjs/common';
+import { ConflictException, UnauthorizedException, ForbiddenException, BadRequestException } from '@nestjs/common';
 import * as argon2 from 'argon2';
 
 describe('AuthService', () => {
@@ -15,6 +15,7 @@ describe('AuthService', () => {
       findFirst: jest.fn(),
       findUnique: jest.fn(),
       create: jest.fn(),
+      update: jest.fn(),
     },
   };
 
@@ -119,6 +120,45 @@ describe('AuthService', () => {
           password: 'SenhaErrada',
         }),
       ).rejects.toThrow(UnauthorizedException);
+    });
+
+    it('deve lançar ForbiddenException se a conta estiver bloqueada por admin', async () => {
+      mockPrismaService.user.findUnique.mockResolvedValue({
+        id: 'uuid-blocked',
+        email: 'blocked@nexus.local',
+        isBlocked: true,
+      });
+
+      await expect(
+        service.login({
+          email: 'blocked@nexus.local',
+          password: 'Password123!',
+        }),
+      ).rejects.toThrow(ForbiddenException);
+    });
+  });
+
+  describe('forgotPassword & resetPassword', () => {
+    it('deve gerar token de redefinição se o e-mail existir', async () => {
+      mockPrismaService.user.findUnique.mockResolvedValue({
+        id: 'uuid-1',
+        email: 'user@nexus.local',
+        isBlocked: false,
+      });
+
+      const result = await service.forgotPassword('user@nexus.local');
+      expect(result.resetToken).toBe('mocked_jwt_token');
+    });
+
+    it('deve redefinir senha com sucesso quando o token de recuperação é valido', async () => {
+      mockJwtService.verifyAsync.mockResolvedValue({
+        sub: 'uuid-1',
+        purpose: 'password_reset',
+      });
+      mockPrismaService.user.update.mockResolvedValue({ id: 'uuid-1' });
+
+      const result = await service.resetPassword('valid_token', 'NovaSenha123!');
+      expect(result.message).toContain('Senha redefinida com sucesso');
     });
   });
 });

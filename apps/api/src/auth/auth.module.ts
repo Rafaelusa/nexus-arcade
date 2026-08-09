@@ -12,7 +12,7 @@ import { JwtStrategy } from './strategies/jwt.strategy';
       useFactory: () => ({
         secret: process.env.JWT_SECRET || 'super_secret_nexus_jwt_key',
         signOptions: {
-          expiresIn: '1h',
+          expiresIn: '8h',
         },
       }),
     }),

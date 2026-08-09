@@ -14,7 +14,7 @@ import { PlatformDetail } from '../../platforms-view/platforms-view.component';
         <div class="header-info">
           <span class="badge-admin font-pixel">ADMINISTRATION</span>
           <h1 class="header-title font-heading text-magenta-glow">🖥️ GERENCIAMENTO DE PLATAFORMAS</h1>
-          <p class="header-subtitle">Cadastre novos consoles (GBA, Mega Drive, NES) e gerencie o catálogo suportado</p>
+          <p class="header-subtitle">Cadastre, edite informações ou remova consoles suportados no catálogo</p>
         </div>
 
         <button (click)="showCreateModal.set(true)" class="btn-primary">
@@ -43,8 +43,11 @@ import { PlatformDetail } from '../../platforms-view/platforms-view.component';
           <p class="plat-games">{{ p._count?.games ?? 0 }} Jogo(s) Vinculado(s)</p>
 
           <div class="card-actions">
+            <button (click)="openEditModal(p)" class="btn-action btn-edit">
+              ✏️ Editar
+            </button>
             <button (click)="deletePlatform(p)" class="btn-action btn-danger">
-              Excluir Plataforma
+              Excluir
             </button>
           </div>
         </div>
@@ -74,6 +77,43 @@ import { PlatformDetail } from '../../platforms-view/platforms-view.component';
             <div class="modal-actions">
               <button type="button" (click)="showCreateModal.set(false)" class="btn-cancel">Cancelar</button>
               <button type="submit" class="btn-primary">Salvar Plataforma</button>
+            </div>
+          </form>
+        </div>
+      </div>
+
+      <!-- Modal de Edição de Plataforma (Item 2) -->
+      <div class="modal-backdrop" *ngIf="selectedPlatformForEdit()">
+        <div class="modal-card glass-panel">
+          <h2 class="modal-title font-heading text-cyan-glow">✏️ Editar Plataforma</h2>
+
+          <form (ngSubmit)="updatePlatform()" class="modal-form">
+            <div class="form-group">
+              <label class="font-heading">Nome da Plataforma</label>
+              <input type="text" [(ngModel)]="editName" name="editName" required class="input-field" />
+            </div>
+
+            <div class="form-group">
+              <label class="font-heading">Código Único (URL Friendly)</label>
+              <input type="text" [(ngModel)]="editCode" name="editCode" required class="input-field" />
+            </div>
+
+            <div class="form-group">
+              <label class="font-heading">Descrição</label>
+              <textarea [(ngModel)]="editDescription" name="editDescription" class="input-field textarea"></textarea>
+            </div>
+
+            <div class="form-group">
+              <label class="font-heading">Status</label>
+              <select [(ngModel)]="editIsActive" name="editIsActive" class="input-field">
+                <option [ngValue]="true">Ativa (Disponível)</option>
+                <option [ngValue]="false">Inativa (Oculta)</option>
+              </select>
+            </div>
+
+            <div class="modal-actions">
+              <button type="button" (click)="selectedPlatformForEdit.set(null)" class="btn-cancel">Cancelar</button>
+              <button type="submit" class="btn-primary">Atualizar Informações</button>
             </div>
           </form>
         </div>
@@ -164,18 +204,29 @@ import { PlatformDetail } from '../../platforms-view/platforms-view.component';
     }
 
     .card-actions {
+      display: flex;
+      gap: 8px;
       margin-top: 8px;
     }
 
     .btn-action {
-      width: 100%;
-      background: rgba(239, 68, 68, 0.15);
-      border: 1px solid rgba(239, 68, 68, 0.4);
-      color: #ef4444;
+      flex: 1;
       padding: 8px 12px;
       border-radius: 6px;
       font-size: 12px;
       cursor: pointer;
+    }
+
+    .btn-edit {
+      background: rgba(0, 240, 255, 0.15);
+      border: 1px solid rgba(0, 240, 255, 0.4);
+      color: var(--accent-cyan);
+    }
+
+    .btn-danger {
+      background: rgba(239, 68, 68, 0.15);
+      border: 1px solid rgba(239, 68, 68, 0.4);
+      color: #ef4444;
     }
 
     .alert {
@@ -205,6 +256,7 @@ import { PlatformDetail } from '../../platforms-view/platforms-view.component';
       align-items: center;
       justify-content: center;
       z-index: 1000;
+      padding: 20px;
     }
 
     .modal-card {
@@ -214,21 +266,30 @@ import { PlatformDetail } from '../../platforms-view/platforms-view.component';
       display: flex;
       flex-direction: column;
       gap: 20px;
+      box-sizing: border-box;
     }
 
     .modal-form {
       display: flex;
       flex-direction: column;
       gap: 16px;
+      width: 100%;
+      box-sizing: border-box;
     }
 
     .form-group {
       display: flex;
       flex-direction: column;
       gap: 6px;
+      width: 100%;
+      min-width: 0;
+      box-sizing: border-box;
     }
 
     .input-field {
+      width: 100%;
+      min-width: 0;
+      box-sizing: border-box;
       background: rgba(15, 23, 42, 0.8);
       border: 1px solid var(--border-neon);
       border-radius: 6px;
@@ -263,12 +324,19 @@ export class AdminPlatformsComponent implements OnInit {
 
   protected platforms = signal<PlatformDetail[]>([]);
   protected showCreateModal = signal(false);
+  protected selectedPlatformForEdit = signal<PlatformDetail | null>(null);
+
   protected errorMessage = signal<string | null>(null);
   protected successMessage = signal<string | null>(null);
 
   protected newName = '';
   protected newCode = '';
   protected newDescription = '';
+
+  protected editName = '';
+  protected editCode = '';
+  protected editDescription = '';
+  protected editIsActive = true;
 
   ngOnInit() {
     this.loadPlatforms();
@@ -307,6 +375,40 @@ export class AdminPlatformsComponent implements OnInit {
       });
   }
 
+  openEditModal(plat: PlatformDetail) {
+    this.selectedPlatformForEdit.set(plat);
+    this.editName = plat.name;
+    this.editCode = plat.code;
+    this.editDescription = plat.description || '';
+    this.editIsActive = plat.isActive;
+  }
+
+  updatePlatform() {
+    const plat = this.selectedPlatformForEdit();
+    if (!plat) return;
+
+    this.errorMessage.set(null);
+    this.successMessage.set(null);
+
+    this.http
+      .patch(`http://localhost:3000/platforms/${plat.id}`, {
+        name: this.editName,
+        code: this.editCode,
+        description: this.editDescription,
+        isActive: this.editIsActive,
+      })
+      .subscribe({
+        next: () => {
+          this.successMessage.set(`Informações da plataforma "${this.editName}" atualizadas!`);
+          this.selectedPlatformForEdit.set(null);
+          this.loadPlatforms();
+        },
+        error: (err) => {
+          this.errorMessage.set(err.error?.message || 'Erro ao atualizar plataforma.');
+        },
+      });
+  }
+
   deletePlatform(plat: PlatformDetail) {
     if (!confirm(`Deseja excluir a plataforma "${plat.name}"?`)) return;
 
@@ -319,7 +421,6 @@ export class AdminPlatformsComponent implements OnInit {
         this.loadPlatforms();
       },
       error: (err) => {
-        // Exibir mensagem de erro tratada (bloqueio se houver jogos vinculados)
         this.errorMessage.set(err.error?.message || 'Erro ao excluir plataforma.');
       },
     });

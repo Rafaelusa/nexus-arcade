@@ -1,46 +1,70 @@
 import { Routes } from '@angular/router';
-import { LoginComponent } from './features/auth/login/login.component';
-import { RegisterComponent } from './features/auth/register/register.component';
-import { ShellComponent } from './layout/shell/shell.component';
-import { DashboardComponent } from './features/dashboard/dashboard.component';
-import { LibraryComponent } from './features/library/library.component';
-import { FavoritesComponent } from './features/favorites/favorites.component';
-import { PlatformsViewComponent } from './features/platforms-view/platforms-view.component';
-import { SettingsComponent } from './features/settings/settings.component';
-import { PlayerComponent } from './features/player/player.component';
-import { AdminComponent } from './features/admin/admin.component';
-import { AdminUsersComponent } from './features/admin/users/admin-users.component';
-import { AdminGamesComponent } from './features/admin/games/admin-games.component';
-import { AdminPlatformsComponent } from './features/admin/platforms/admin-platforms.component';
-import { AdminLogsComponent } from './features/admin/logs/admin-logs.component';
-
 import { authGuard } from './core/guards/auth.guard';
 import { roleGuard } from './core/guards/role.guard';
 
 export const routes: Routes = [
-  { path: 'login', component: LoginComponent },
-  { path: 'register', component: RegisterComponent },
+  {
+    path: 'login',
+    loadComponent: () => import('./features/auth/login/login.component').then((m) => m.LoginComponent),
+  },
+  {
+    path: 'register',
+    loadComponent: () => import('./features/auth/register/register.component').then((m) => m.RegisterComponent),
+  },
   {
     path: '',
-    component: ShellComponent,
+    loadComponent: () => import('./layout/shell/shell.component').then((m) => m.ShellComponent),
     canActivate: [authGuard],
     children: [
       { path: '', redirectTo: 'dashboard', pathMatch: 'full' },
-      { path: 'dashboard', component: DashboardComponent },
-      { path: 'library', component: LibraryComponent },
-      { path: 'favorites', component: FavoritesComponent },
-      { path: 'platforms', component: PlatformsViewComponent },
-      { path: 'settings', component: SettingsComponent },
-      { path: 'player/:gameId', component: PlayerComponent },
+      {
+        path: 'dashboard',
+        loadComponent: () => import('./features/dashboard/dashboard.component').then((m) => m.DashboardComponent),
+      },
+      {
+        path: 'library',
+        loadComponent: () => import('./features/library/library.component').then((m) => m.LibraryComponent),
+      },
+      {
+        path: 'favorites',
+        loadComponent: () => import('./features/favorites/favorites.component').then((m) => m.FavoritesComponent),
+      },
+      {
+        path: 'platforms',
+        loadComponent: () => import('./features/platforms-view/platforms-view.component').then((m) => m.PlatformsViewComponent),
+      },
+      {
+        path: 'settings',
+        loadComponent: () => import('./features/settings/settings.component').then((m) => m.SettingsComponent),
+      },
+      {
+        path: 'player/:gameId',
+        loadComponent: () => import('./features/player/player.component').then((m) => m.PlayerComponent),
+      },
       {
         path: 'admin',
         canActivate: [roleGuard],
         children: [
-          { path: '', component: AdminComponent },
-          { path: 'users', component: AdminUsersComponent },
-          { path: 'games', component: AdminGamesComponent },
-          { path: 'platforms', component: AdminPlatformsComponent },
-          { path: 'logs', component: AdminLogsComponent },
+          {
+            path: '',
+            loadComponent: () => import('./features/admin/admin.component').then((m) => m.AdminComponent),
+          },
+          {
+            path: 'users',
+            loadComponent: () => import('./features/admin/users/admin-users.component').then((m) => m.AdminUsersComponent),
+          },
+          {
+            path: 'games',
+            loadComponent: () => import('./features/admin/games/admin-games.component').then((m) => m.AdminGamesComponent),
+          },
+          {
+            path: 'platforms',
+            loadComponent: () => import('./features/admin/platforms/admin-platforms.component').then((m) => m.AdminPlatformsComponent),
+          },
+          {
+            path: 'logs',
+            loadComponent: () => import('./features/admin/logs/admin-logs.component').then((m) => m.AdminLogsComponent),
+          },
         ],
       },
     ],

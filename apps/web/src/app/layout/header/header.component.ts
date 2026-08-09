@@ -2,6 +2,7 @@ import { Component, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterModule } from '@angular/router';
 import { AuthService } from '../../core/services/auth.service';
+import { GamepadService } from '../../core/services/gamepad.service';
 
 @Component({
   selector: 'app-header',
@@ -15,6 +16,17 @@ import { AuthService } from '../../core/services/auth.service';
       </div>
 
       <div class="user-area" *ngIf="authService.currentUser() as user">
+        <!-- Gamepad API Connected Hardware Badge -->
+        <div
+          class="gamepad-badge font-pixel"
+          [class.connected]="gamepadService.connectedGamepadName()"
+          routerLink="/settings"
+          [title]="gamepadService.connectedGamepadName() || 'Nenhum controle físico detectado no momento'"
+        >
+          <span class="pad-icon">{{ getGamepadInfo(gamepadService.connectedGamepadName()).icon }}</span>
+          <span class="pad-label">{{ getGamepadInfo(gamepadService.connectedGamepadName()).label }}</span>
+        </div>
+
         <div class="user-info">
           <span class="username">{{ user.username }}</span>
           <span class="user-role-badge" [class.badge-admin]="authService.isAdmin()" [class.badge-gamer]="authService.isGamer()">
@@ -64,6 +76,27 @@ import { AuthService } from '../../core/services/auth.service';
       display: flex;
       align-items: center;
       gap: 16px;
+    }
+
+    .gamepad-badge {
+      font-size: 9px;
+      padding: 6px 10px;
+      border-radius: 6px;
+      background: rgba(15, 23, 42, 0.8);
+      border: 1px solid rgba(148, 163, 184, 0.3);
+      color: var(--text-muted);
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      cursor: pointer;
+      transition: all 0.2s ease;
+    }
+
+    .gamepad-badge.connected {
+      background: rgba(0, 240, 255, 0.15);
+      border-color: var(--accent-cyan);
+      color: var(--accent-cyan);
+      box-shadow: var(--glow-cyan);
     }
 
     .user-info {
@@ -127,4 +160,18 @@ import { AuthService } from '../../core/services/auth.service';
 })
 export class HeaderComponent {
   protected authService = inject(AuthService);
+  protected gamepadService = inject(GamepadService);
+
+  getGamepadInfo(name: string | null): { icon: string; label: string } {
+    if (!name) return { icon: '⚪', label: 'Sem Gamepad' };
+    const lower = name.toLowerCase();
+    if (lower.includes('xbox')) return { icon: '🎮', label: 'Xbox' };
+    if (lower.includes('playstation') || lower.includes('dual') || lower.includes('ps5') || lower.includes('ps4') || lower.includes('ps3')) {
+      return { icon: '🎮', label: 'PlayStation' };
+    }
+    if (lower.includes('nintendo') || lower.includes('switch') || lower.includes('pro controller')) {
+      return { icon: '🎮', label: 'Switch Pro' };
+    }
+    return { icon: '🎮', label: 'Gamepad' };
+  }
 }

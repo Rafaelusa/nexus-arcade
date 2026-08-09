@@ -4,7 +4,7 @@ import { ActivatedRoute, Router, RouterModule } from '@angular/router';
 import { HttpClient } from '@angular/common/http';
 import { GameItem } from '../library/library.component';
 import { GamepadService } from '../../core/services/gamepad.service';
-import { SaveStateService, SaveStateSlot } from '../../core/services/save-state.service';
+import { SaveStateService } from '../../core/services/save-state.service';
 
 declare global {
   interface Window {
@@ -45,11 +45,11 @@ declare global {
         </div>
 
         <div class="header-actions" *ngIf="game()?.romStorageKey">
-          <button (click)="saveCloudSlot()" class="btn-action btn-save" title="Salvar Estado na Nuvem">
-            💾 Salvar Slot 1
+          <button (click)="saveCloudSlot()" [disabled]="isSavingState()" class="btn-action btn-save" title="Salvar Estado na Memória & Nuvem">
+            💾 {{ isSavingState() ? 'Salvando...' : 'Salvar Slot 1' }}
           </button>
-          <button (click)="loadCloudSlot()" class="btn-action btn-load" title="Carregar Estado da Nuvem">
-            📂 Carregar Slot 1
+          <button (click)="loadCloudSlot()" [disabled]="isLoadingState()" class="btn-action btn-load" title="Carregar Estado da Nuvem">
+            📂 {{ isLoadingState() ? 'Carregando...' : 'Carregar Slot 1' }}
           </button>
           <button (click)="toggleFullscreen()" class="btn-action" title="Tela Cheia">
             🖥️ Tela Cheia
@@ -172,6 +172,12 @@ declare global {
       cursor: pointer;
       font-size: 13px;
       font-weight: 600;
+      transition: all 0.2s ease;
+    }
+
+    .btn-action:disabled {
+      opacity: 0.6;
+      cursor: not-allowed;
     }
 
     .btn-save {
@@ -248,6 +254,8 @@ export class PlayerComponent implements OnInit, OnDestroy {
 
   protected game = signal<GameItem | null>(null);
   protected saveStatusMessage = signal<string | null>(null);
+  protected isSavingState = signal(false);
+  protected isLoadingState = signal(false);
 
   ngOnInit() {
     const gameId = this.route.snapshot.paramMap.get('gameId');
@@ -257,7 +265,7 @@ export class PlayerComponent implements OnInit, OnDestroy {
   }
 
   ngOnDestroy() {
-    this.cleanupEmulatorScript();
+    this.destroyEmulatorInstance();
   }
 
   loadGame(gameId: string) {
@@ -273,6 +281,8 @@ export class PlayerComponent implements OnInit, OnDestroy {
   }
 
   initEmulator(game: GameItem) {
+    this.destroyEmulatorInstance();
+
     const coreMap: Record<string, string> = {
       snes: 'snes9x',
       gba: 'mgba',
@@ -295,8 +305,6 @@ export class PlayerComponent implements OnInit, OnDestroy {
   }
 
   injectEmulatorScript() {
-    this.cleanupEmulatorScript();
-
     const script = document.createElement('script');
     script.id = 'emulatorjs-loader-script';
     script.src = 'https://cdn.emulatorjs.org/stable/data/loader.js';
@@ -304,55 +312,191 @@ export class PlayerComponent implements OnInit, OnDestroy {
     document.body.appendChild(script);
   }
 
-  cleanupEmulatorScript() {
+  destroyEmulatorInstance() {
+    // 1. Destruir instância do emulador se existir
+    if (window.EJS_emulator) {
+      try {
+        if (typeof window.EJS_emulator.destroy === 'function') {
+          window.EJS_emulator.destroy();
+        }
+        if (window.EJS_emulator.audioContext) {
+          window.EJS_emulator.audioContext.close();
+        }
+      } catch (e) {
+        console.warn('[PlayerComponent] Erro ao encerrar EJS_emulator:', e);
+      }
+      delete window.EJS_emulator;
+    }
+
+    // 2. Limpar elemento do script
     const existingScript = document.getElementById('emulatorjs-loader-script');
     if (existingScript) {
       existingScript.remove();
     }
+
+    // 3. Esvaziar o contêiner DOM do canvas para evitar áudio/vídeo fantasma em segundo plano
+    const target = document.getElementById('game-player-target');
+    if (target) {
+      target.innerHTML = '';
+    }
   }
 
-  saveCloudSlot() {
+  // --- SAVE STATE DE MEMÓRIA REAL & CLOUD SYNC ---
+
+  async saveCloudSlot() {
     if (!this.game()) return;
 
-    this.showSaveToast('💾 Salvando progresso do Slot 1 na Nuvem...');
+    this.isSavingState.set(true);
+    this.showSaveToast('💾 Capturando estado em memória da ROM...');
 
-    // Salvar estado via API RESTful no PostgreSQL
-    this.saveStateService
-      .saveSlot(this.game()!.id, 1, 'BASE64_SAVESTATE_PROGRESS_DATA')
-      .subscribe({
-        next: () => {
-          this.showSaveToast('✓ Progresso do Slot 1 salvo com sucesso no PostgreSQL!');
-        },
-        error: () => {
-          this.showSaveToast('⚠️ Erro ao salvar estado na nuvem.');
-        },
-      });
+    try {
+      // 1. Extrair Uint8Array do estado de memória atual do emulador
+      const stateBytes = await this.extractStateFromEmulator();
+
+      if (!stateBytes || stateBytes.byteLength === 0) {
+        throw new Error('O emulador não retornou dados de salvamento válidos.');
+      }
+
+      // 2. Converter Uint8Array para Base64
+      const base64State = this.uint8ArrayToBase64(stateBytes);
+
+      // 3. Persistir no PostgreSQL via API NestJS
+      this.saveStateService
+        .saveSlot(this.game()!.id, 1, base64State)
+        .subscribe({
+          next: () => {
+            this.isSavingState.set(false);
+            this.showSaveToast('✓ Estado exato salvo na memória e sincronizado com o banco!');
+          },
+          error: (err) => {
+            this.isSavingState.set(false);
+            this.showSaveToast('⚠️ Erro ao salvar estado no banco de dados.');
+            console.error(err);
+          },
+        });
+    } catch (err: any) {
+      this.isSavingState.set(false);
+      this.showSaveToast(`⚠️ ${err.message || 'Falha ao capturar estado em memória.'}`);
+      console.warn('[SaveState] Fallback ou erro ao capturar estado:', err);
+    }
   }
 
-  loadCloudSlot() {
+  async loadCloudSlot() {
     if (!this.game()) return;
 
-    this.showSaveToast('📂 Buscando save do Slot 1 na Nuvem...');
+    this.isLoadingState.set(true);
+    this.showSaveToast('📂 Carregando Save State do banco de dados...');
 
     this.saveStateService.getGameSaveSlots(this.game()!.id).subscribe({
-      next: (slots) => {
-        if (slots && slots.length > 0) {
-          this.showSaveToast(`✓ Save do Slot 1 encontrado (Atualizado em: ${new Date(slots[0].updatedAt).toLocaleTimeString()})`);
-        } else {
-          this.showSaveToast('ℹ️ Nenhum save encontrado para o Slot 1.');
+      next: async (slots) => {
+        if (!slots || slots.length === 0) {
+          this.isLoadingState.set(false);
+          this.showSaveToast('ℹ️ Nenhum save state encontrado para este jogo no Slot 1.');
+          return;
+        }
+
+        const slot = slots[0];
+        const base64State = slot.storageKey;
+
+        try {
+          // 1. Converter Base64 do banco para Uint8Array
+          const stateBytes = this.base64ToUint8Array(base64State);
+
+          // 2. Aplicar o estado exatamente no ponto de jogo no WebAssembly Emulator
+          await this.applyStateToEmulator(stateBytes);
+
+          this.isLoadingState.set(false);
+          this.showSaveToast(`✓ Estado restaurado com sucesso! (Salvo em: ${new Date(slot.updatedAt).toLocaleTimeString()})`);
+        } catch (err: any) {
+          this.isLoadingState.set(false);
+          this.showSaveToast(`⚠️ Falha ao aplicar save state: ${err.message}`);
         }
       },
       error: () => {
-        this.showSaveToast('⚠️ Erro ao carregar save da nuvem.');
+        this.isLoadingState.set(false);
+        this.showSaveToast('⚠️ Erro ao buscar save state no banco.');
       },
     });
+  }
+
+  private extractStateFromEmulator(): Promise<Uint8Array> {
+    return new Promise((resolve, reject) => {
+      if (!window.EJS_emulator) {
+        return reject(new Error('Aguarde o emulador carregar completamente antes de salvar.'));
+      }
+
+      // Tentar obter o estado via API do EmulatorJS / RetroArch
+      try {
+        if (typeof window.EJS_emulator.getState === 'function') {
+          const res = window.EJS_emulator.getState();
+          if (res && res instanceof Uint8Array) return resolve(res);
+        }
+
+        if (window.EJS_emulator.gameManager) {
+          if (typeof window.EJS_emulator.gameManager.getState === 'function') {
+            window.EJS_emulator.gameManager.getState((state: Uint8Array) => {
+              if (state) resolve(state);
+              else reject(new Error('O emulador retornou um estado vazio.'));
+            });
+            return;
+          }
+        }
+      } catch (err) {
+        console.error('[SaveState] Erro ao invocar getState():', err);
+      }
+
+      reject(new Error('Aguarde a inicialização do jogo para salvar o estado.'));
+    });
+  }
+
+  private applyStateToEmulator(stateBytes: Uint8Array): Promise<void> {
+    return new Promise((resolve, reject) => {
+      if (!window.EJS_emulator) {
+        return reject(new Error('O emulador precisa estar aberto para carregar um estado.'));
+      }
+
+      try {
+        if (typeof window.EJS_emulator.loadState === 'function') {
+          window.EJS_emulator.loadState(stateBytes);
+          return resolve();
+        }
+
+        if (window.EJS_emulator.gameManager && typeof window.EJS_emulator.gameManager.loadState === 'function') {
+          window.EJS_emulator.gameManager.loadState(stateBytes);
+          return resolve();
+        }
+      } catch (err) {
+        console.error('[SaveState] Erro ao invocar loadState():', err);
+      }
+
+      reject(new Error('Função de restauração não suportada no emulador atual.'));
+    });
+  }
+
+  private uint8ArrayToBase64(bytes: Uint8Array): string {
+    let binary = '';
+    const len = bytes.byteLength;
+    for (let i = 0; i < len; i++) {
+      binary += String.fromCharCode(bytes[i]);
+    }
+    return btoa(binary);
+  }
+
+  private base64ToUint8Array(base64: string): Uint8Array {
+    const binaryString = atob(base64);
+    const len = binaryString.length;
+    const bytes = new Uint8Array(len);
+    for (let i = 0; i < len; i++) {
+      bytes[i] = binaryString.charCodeAt(i);
+    }
+    return bytes;
   }
 
   private showSaveToast(msg: string) {
     this.saveStatusMessage.set(msg);
     setTimeout(() => {
       this.saveStatusMessage.set(null);
-    }, 4000);
+    }, 4500);
   }
 
   toggleFullscreen() {
@@ -368,11 +512,23 @@ export class PlayerComponent implements OnInit, OnDestroy {
 
   reloadEmulator() {
     if (this.game()) {
-      this.initEmulator(this.game()!);
+      // Se a função nativa de restart do EmulatorJS existir, chamar para reinício suave sem duplicação de áudio
+      if (window.EJS_emulator && window.EJS_emulator.gameManager && typeof window.EJS_emulator.gameManager.restart === 'function') {
+        window.EJS_emulator.gameManager.restart();
+        this.showSaveToast('🔄 Emulação reiniciada suavemente.');
+      } else if (window.EJS_emulator && typeof window.EJS_emulator.restart === 'function') {
+        window.EJS_emulator.restart();
+        this.showSaveToast('🔄 Emulação reiniciada suavemente.');
+      } else {
+        // Reinício limpo destruindo completamente a instância e o DOM antigo
+        this.initEmulator(this.game()!);
+        this.showSaveToast('🔄 Emulador recarregado limpo.');
+      }
     }
   }
 
   goBack() {
+    this.destroyEmulatorInstance();
     this.router.navigate(['/library']);
   }
 }

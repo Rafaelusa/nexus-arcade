@@ -34,13 +34,25 @@ ${colors.reset}
 async function bootstrap() {
   printBanner();
 
-  // 1. Ensure .env file exists
+  // 1. Ensure local .env file exists with working development defaults
   const envPath = path.join(__dirname, '../.env');
-  const envExamplePath = path.join(__dirname, '../.env.example');
 
-  if (!fs.existsSync(envPath) && fs.existsSync(envExamplePath)) {
-    console.log(`${colors.yellow}⚠️  Arquivo .env não encontrado. Copiando de .env.example...${colors.reset}`);
-    fs.copyFileSync(envExamplePath, envPath);
+  if (!fs.existsSync(envPath)) {
+    console.log(`${colors.yellow}⚠️  Arquivo .env local não encontrado. Gerando .env com credenciais de desenvolvimento local...${colors.reset}`);
+    const defaultEnvContent = `NODE_ENV=development
+PORT=3000
+POSTGRES_HOST=localhost
+POSTGRES_PORT=5432
+POSTGRES_USER=nexus
+POSTGRES_PASSWORD=nexuspass
+POSTGRES_DB=nexus_arcade
+DATABASE_URL=postgresql://nexus:nexuspass@localhost:5432/nexus_arcade?schema=public
+ADMIN_EMAIL=admin@nexus.local
+ADMIN_PASSWORD=Admin123!NexusArcade
+JWT_SECRET=nexus_arcade_dev_secret_key_change_in_production
+JWT_EXPIRES_IN=1d
+`;
+    fs.writeFileSync(envPath, defaultEnvContent);
   }
 
   // Load environment variables into process.env

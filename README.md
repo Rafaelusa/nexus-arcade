@@ -100,7 +100,7 @@ O projeto possui **8 tabelas relacionais** modeladas e migradas automaticamente:
 - **State & Async**: RxJS + Angular 21 Signals Reativos
 - **Segurança**: Functional `authInterceptor`, `authGuard` & `roleGuard`
 - **Management UI**: Dashboards de Usuários, Jogos, Upload de ROMs com SHA-256, Capas e Auditoria
-- **Hardware Integration**: Web Gamepad API, IndexedDB
+- **Hardware Integration**: Web Gamepad API (Toast HUD), Save States Cloud Sync
 
 ### Backend
 - **Framework**: NestJS (TypeScript)
@@ -125,8 +125,8 @@ O projeto possui **8 tabelas relacionais** modeladas e migradas automaticamente:
 ```text
 nexus-arcade/
 ├── apps/
-│   ├── web/                     # Frontend Angular 21 (Library, Admin Dashboards, WebAssembly Player, EmulatorJS)
-│   └── api/                     # Backend NestJS API (Auth, Users, Platforms, Games, Storage)
+│   ├── web/                     # Frontend Angular 21 (Library, Admin Dashboards, WebAssembly Player, Gamepad API)
+│   └── api/                     # Backend NestJS API (Auth, Users, Platforms, Games, Storage, Saves Cloud Sync)
 ├── packages/
 │   └── shared-types/            # Tipos e DTOs compartilhados
 ├── database/
@@ -159,8 +159,8 @@ nexus-arcade/
 - 🟢 **[Sprint 6](file:///home/rafael-dev/Projetos%20Pessoais/nexus-arcade/docs/acceptance-criteria/sprint-6.md)**: Frontend Core Shell (Angular 21, Cyberpunk Theme, Auth & RBAC UX) (`v0.6.0-sprint6`) — **Concluído**
 - 🟢 **[Sprint 7](file:///home/rafael-dev/Projetos%20Pessoais/nexus-arcade/docs/acceptance-criteria/sprint-7.md)**: Frontend Library & Admin Dashboards (Management UI) (`v0.7.0-sprint7`) — **Concluído**
 - 🟢 **[Sprint 8](file:///home/rafael-dev/Projetos%20Pessoais/nexus-arcade/docs/acceptance-criteria/sprint-8.md)**: WebAssembly Emulator Engine (EmulatorJS & ROM Player) (`v0.8.0-sprint8`) — **Concluído**
-- 🟡 **Sprint 9**: Gamepad API Integration & Save States (Local + Cloud Sync) — **Em andamento**
-- ⚪ **Sprint 10**: Gamer Statistics Dashboard, Testing Suite & CI/CD Pipeline
+- 🟢 **[Sprint 9](file:///home/rafael-dev/Projetos%20Pessoais/nexus-arcade/docs/acceptance-criteria/sprint-9.md)**: Gamepad API Integration & Save States (Local + Cloud Sync) (`v0.9.0-sprint9`) — **Concluído**
+- 🟡 **Sprint 10**: Gamer Statistics Dashboard, Testing Suite & CI/CD Pipeline — **Em andamento**
 
 ---
 

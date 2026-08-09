@@ -1,7 +1,8 @@
 import { Component, signal, inject, OnInit, OnDestroy, ElementRef, ViewChild } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { ActivatedRoute, Router, RouterModule } from '@angular/router';
+import { ActivatedRoute, Router, RouterModule, NavigationStart } from '@angular/router';
 import { HttpClient } from '@angular/common/http';
+import { filter, Subscription } from 'rxjs';
 import { GameItem } from '../library/library.component';
 import { GamepadService } from '../../core/services/gamepad.service';
 import { SaveStateService } from '../../core/services/save-state.service';
@@ -257,7 +258,16 @@ export class PlayerComponent implements OnInit, OnDestroy {
   protected isSavingState = signal(false);
   protected isLoadingState = signal(false);
 
+  private routerSub?: Subscription;
+
   ngOnInit() {
+    // Escutar navegação de saída do Angular Router para encerrar o emulador e silenciar o áudio imediatamente
+    this.routerSub = this.router.events
+      .pipe(filter((event) => event instanceof NavigationStart))
+      .subscribe(() => {
+        this.destroyEmulatorInstance();
+      });
+
     const gameId = this.route.snapshot.paramMap.get('gameId');
     if (gameId) {
       this.loadGame(gameId);
@@ -265,6 +275,7 @@ export class PlayerComponent implements OnInit, OnDestroy {
   }
 
   ngOnDestroy() {
+    this.routerSub?.unsubscribe();
     this.destroyEmulatorInstance();
   }
 
@@ -313,9 +324,12 @@ export class PlayerComponent implements OnInit, OnDestroy {
   }
 
   destroyEmulatorInstance() {
-    // 1. Destruir instância do emulador se existir
+    // 1. Pausar, silenciar e encerrar a instância EJS_emulator
     if (window.EJS_emulator) {
       try {
+        if (typeof window.EJS_emulator.pause === 'function') {
+          window.EJS_emulator.pause();
+        }
         if (typeof window.EJS_emulator.destroy === 'function') {
           window.EJS_emulator.destroy();
         }
@@ -323,22 +337,35 @@ export class PlayerComponent implements OnInit, OnDestroy {
           window.EJS_emulator.audioContext.close();
         }
       } catch (e) {
-        console.warn('[PlayerComponent] Erro ao encerrar EJS_emulator:', e);
+        console.warn('[PlayerComponent] Erro ao destruir EJS_emulator:', e);
       }
-      delete window.EJS_emulator;
     }
 
-    // 2. Limpar elemento do script
-    const existingScript = document.getElementById('emulatorjs-loader-script');
-    if (existingScript) {
-      existingScript.remove();
-    }
+    // 2. Silenciar qualquer mídia HTML5 ativada no documento
+    try {
+      const mediaElements = document.querySelectorAll('audio, video');
+      mediaElements.forEach((el: any) => {
+        el.pause();
+        el.src = '';
+      });
+    } catch {}
 
-    // 3. Esvaziar o contêiner DOM do canvas para evitar áudio/vídeo fantasma em segundo plano
-    const target = document.getElementById('game-player-target');
+    // 3. Remover todos os scripts do EmulatorJS injetados
+    const scripts = document.querySelectorAll('script[src*="emulatorjs"]');
+    scripts.forEach((s) => s.remove());
+
+    // 4. Limpar o container DOM para garantir que nenhum canvas ou áudio WebAssembly persista
+    const target = document.getElementById('emulator-container');
     if (target) {
-      target.innerHTML = '';
+      target.innerHTML = '<div id="game-player-target"></div>';
     }
+
+    // 5. Limpar referências globais
+    delete window.EJS_emulator;
+    delete window.EJS_player;
+    delete window.EJS_core;
+    delete window.EJS_gameName;
+    delete window.EJS_gameUrl;
   }
 
   // --- SAVE STATE DE MEMÓRIA REAL & CLOUD SYNC ---
@@ -350,14 +377,14 @@ export class PlayerComponent implements OnInit, OnDestroy {
     this.showSaveToast('💾 Capturando estado em memória da ROM...');
 
     try {
-      // 1. Extrair Uint8Array do estado de memória atual do emulador
+      // 1. Extrair Uint8Array da memória do emulador com timeout de segurança
       const stateBytes = await this.extractStateFromEmulator();
 
       if (!stateBytes || stateBytes.byteLength === 0) {
         throw new Error('O emulador não retornou dados de salvamento válidos.');
       }
 
-      // 2. Converter Uint8Array para Base64
+      // 2. Converter Uint8Array para Base64 em chunks seguros
       const base64State = this.uint8ArrayToBase64(stateBytes);
 
       // 3. Persistir no PostgreSQL via API NestJS
@@ -377,7 +404,6 @@ export class PlayerComponent implements OnInit, OnDestroy {
     } catch (err: any) {
       this.isSavingState.set(false);
       this.showSaveToast(`⚠️ ${err.message || 'Falha ao capturar estado em memória.'}`);
-      console.warn('[SaveState] Fallback ou erro ao capturar estado:', err);
     }
   }
 
@@ -399,7 +425,7 @@ export class PlayerComponent implements OnInit, OnDestroy {
         const base64State = slot.storageKey;
 
         try {
-          // 1. Converter Base64 do banco para Uint8Array
+          // 1. Converter Base64 do banco para Uint8Array com validação de formato
           const stateBytes = this.base64ToUint8Array(base64State);
 
           // 2. Aplicar o estado exatamente no ponto de jogo no WebAssembly Emulator
@@ -409,7 +435,7 @@ export class PlayerComponent implements OnInit, OnDestroy {
           this.showSaveToast(`✓ Estado restaurado com sucesso! (Salvo em: ${new Date(slot.updatedAt).toLocaleTimeString()})`);
         } catch (err: any) {
           this.isLoadingState.set(false);
-          this.showSaveToast(`⚠️ Falha ao aplicar save state: ${err.message}`);
+          this.showSaveToast(`⚠️ ${err.message}`);
         }
       },
       error: () => {
@@ -421,38 +447,61 @@ export class PlayerComponent implements OnInit, OnDestroy {
 
   private extractStateFromEmulator(): Promise<Uint8Array> {
     return new Promise((resolve, reject) => {
+      const timeout = setTimeout(() => {
+        reject(new Error('Aguarde o emulador carregar a partida completamente antes de salvar.'));
+      }, 4000);
+
       if (!window.EJS_emulator) {
-        return reject(new Error('Aguarde o emulador carregar completamente antes de salvar.'));
+        clearTimeout(timeout);
+        return reject(new Error('Aguarde a inicialização do emulador.'));
       }
 
-      // Tentar obter o estado via API do EmulatorJS / RetroArch
       try {
+        // Tentar via EJS_emulator.getState()
         if (typeof window.EJS_emulator.getState === 'function') {
           const res = window.EJS_emulator.getState();
-          if (res && res instanceof Uint8Array) return resolve(res);
+          if (res && res instanceof Uint8Array && res.byteLength > 0) {
+            clearTimeout(timeout);
+            return resolve(res);
+          }
         }
 
+        // Tentar via EJS_emulator.gameManager.getState()
         if (window.EJS_emulator.gameManager) {
           if (typeof window.EJS_emulator.gameManager.getState === 'function') {
             window.EJS_emulator.gameManager.getState((state: Uint8Array) => {
-              if (state) resolve(state);
-              else reject(new Error('O emulador retornou um estado vazio.'));
+              clearTimeout(timeout);
+              if (state && state instanceof Uint8Array && state.byteLength > 0) {
+                resolve(state);
+              } else {
+                reject(new Error('O emulador retornou um estado de memória vazio.'));
+              }
             });
             return;
           }
         }
+
+        // Tentar via EJS_emulator.saveState()
+        if (typeof window.EJS_emulator.saveState === 'function') {
+          const res = window.EJS_emulator.saveState();
+          if (res && res instanceof Uint8Array && res.byteLength > 0) {
+            clearTimeout(timeout);
+            return resolve(res);
+          }
+        }
       } catch (err) {
-        console.error('[SaveState] Erro ao invocar getState():', err);
+        console.error('[SaveState] Erro ao invocar métodos de estado:', err);
       }
 
-      reject(new Error('Aguarde a inicialização do jogo para salvar o estado.'));
+      clearTimeout(timeout);
+      reject(new Error('Aguarde a partida carregar para realizar o salvamento de estado.'));
     });
   }
 
   private applyStateToEmulator(stateBytes: Uint8Array): Promise<void> {
     return new Promise((resolve, reject) => {
       if (!window.EJS_emulator) {
-        return reject(new Error('O emulador precisa estar aberto para carregar um estado.'));
+        return reject(new Error('O emulador precisa estar ativo na tela para carregar o estado.'));
       }
 
       try {
@@ -469,27 +518,40 @@ export class PlayerComponent implements OnInit, OnDestroy {
         console.error('[SaveState] Erro ao invocar loadState():', err);
       }
 
-      reject(new Error('Função de restauração não suportada no emulador atual.'));
+      reject(new Error('Função de restauração de estado não disponível no emulador atual.'));
     });
   }
 
   private uint8ArrayToBase64(bytes: Uint8Array): string {
     let binary = '';
     const len = bytes.byteLength;
-    for (let i = 0; i < len; i++) {
-      binary += String.fromCharCode(bytes[i]);
+    const CHUNK_SIZE = 0x8000;
+    for (let i = 0; i < len; i += CHUNK_SIZE) {
+      const chunk = bytes.subarray(i, i + CHUNK_SIZE);
+      binary += String.fromCharCode.apply(null, Array.from(chunk));
     }
     return btoa(binary);
   }
 
   private base64ToUint8Array(base64: string): Uint8Array {
-    const binaryString = atob(base64);
-    const len = binaryString.length;
-    const bytes = new Uint8Array(len);
-    for (let i = 0; i < len; i++) {
-      bytes[i] = binaryString.charCodeAt(i);
+    const cleanBase64 = base64.trim().replace(/\s/g, '');
+
+    // Validar se é base64 válido antes de chamar atob
+    if (!/^[A-Za-z0-9+/=]+$/.test(cleanBase64)) {
+      throw new Error('O Slot 1 continha um teste antigo incompatível. Salve um novo estado no Slot 1.');
     }
-    return bytes;
+
+    try {
+      const binaryString = atob(cleanBase64);
+      const len = binaryString.length;
+      const bytes = new Uint8Array(len);
+      for (let i = 0; i < len; i++) {
+        bytes[i] = binaryString.charCodeAt(i);
+      }
+      return bytes;
+    } catch {
+      throw new Error('Falha ao decodificar save state. Por favor, salve um novo estado no Slot 1.');
+    }
   }
 
   private showSaveToast(msg: string) {
@@ -512,7 +574,6 @@ export class PlayerComponent implements OnInit, OnDestroy {
 
   reloadEmulator() {
     if (this.game()) {
-      // Se a função nativa de restart do EmulatorJS existir, chamar para reinício suave sem duplicação de áudio
       if (window.EJS_emulator && window.EJS_emulator.gameManager && typeof window.EJS_emulator.gameManager.restart === 'function') {
         window.EJS_emulator.gameManager.restart();
         this.showSaveToast('🔄 Emulação reiniciada suavemente.');
@@ -520,7 +581,6 @@ export class PlayerComponent implements OnInit, OnDestroy {
         window.EJS_emulator.restart();
         this.showSaveToast('🔄 Emulação reiniciada suavemente.');
       } else {
-        // Reinício limpo destruindo completamente a instância e o DOM antigo
         this.initEmulator(this.game()!);
         this.showSaveToast('🔄 Emulador recarregado limpo.');
       }

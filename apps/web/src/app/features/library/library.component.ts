@@ -2,7 +2,7 @@ import { Component, signal, inject, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { HttpClient } from '@angular/common/http';
-import { Router } from '@angular/router';
+import { ActivatedRoute, Router } from '@angular/router';
 
 export interface GameItem {
   id: string;
@@ -34,7 +34,10 @@ export interface PlatformItem {
       <header class="page-header glass-panel">
         <div class="header-info">
           <h1 class="header-title font-heading text-cyan-glow">BIBLIOTECA DE JOGOS</h1>
-          <p class="header-subtitle">Explore seu catálogo de clássicos e execute diretamente no seu navegador</p>
+          <p class="header-subtitle">
+            Explore seu catálogo de clássicos e execute diretamente no seu navegador.
+            <span class="count-badge font-pixel">EXIBINDO {{ games().length }} TÍTULO(S)</span>
+          </p>
         </div>
 
         <div class="filter-controls">
@@ -51,7 +54,7 @@ export interface PlatformItem {
           <select [(ngModel)]="selectedPlatformCode" (change)="loadGames()" class="select-platform">
             <option value="">Todas as Plataformas</option>
             <option *ngFor="let plat of platforms()" [value]="plat.code">
-              {{ plat.name }}
+              {{ plat.name }} ({{ plat.code | uppercase }})
             </option>
           </select>
         </div>
@@ -125,6 +128,19 @@ export interface PlatformItem {
     .header-subtitle {
       font-size: 14px;
       color: var(--text-muted);
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      flex-wrap: wrap;
+    }
+
+    .count-badge {
+      font-size: 9px;
+      background: rgba(0, 240, 255, 0.15);
+      border: 1px solid var(--accent-cyan);
+      color: var(--accent-cyan);
+      padding: 2px 6px;
+      border-radius: 4px;
     }
 
     .filter-controls {
@@ -270,6 +286,7 @@ export interface PlatformItem {
 export class LibraryComponent implements OnInit {
   private http = inject(HttpClient);
   private router = inject(Router);
+  private route = inject(ActivatedRoute);
 
   protected games = signal<GameItem[]>([]);
   protected platforms = signal<PlatformItem[]>([]);
@@ -279,6 +296,11 @@ export class LibraryComponent implements OnInit {
   protected selectedPlatformCode = '';
 
   ngOnInit() {
+    const platParam = this.route.snapshot.queryParamMap.get('platform');
+    if (platParam) {
+      this.selectedPlatformCode = platParam;
+    }
+
     this.loadPlatforms();
     this.loadGames();
     this.loadFavorites();

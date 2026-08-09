@@ -91,17 +91,17 @@ export interface UserItem {
           <form (ngSubmit)="createUser()" class="modal-form">
             <div class="form-group">
               <label class="font-heading">E-mail</label>
-              <input type="email" [(ngModel)]="newEmail" name="newEmail" required class="input-field" />
+              <input type="email" [(ngModel)]="newEmail" name="newEmail" required class="input-field" placeholder="exemplo@email.com" />
             </div>
 
             <div class="form-group">
               <label class="font-heading">Username</label>
-              <input type="text" [(ngModel)]="newUsername" name="newUsername" required class="input-field" />
+              <input type="text" [(ngModel)]="newUsername" name="newUsername" required class="input-field" placeholder="Nome de usuário" />
             </div>
 
             <div class="form-group">
               <label class="font-heading">Senha Inicial</label>
-              <input type="password" [(ngModel)]="newPassword" name="newPassword" required class="input-field" />
+              <input type="password" [(ngModel)]="newPassword" name="newPassword" required class="input-field" placeholder="••••••••" />
             </div>
 
             <div class="form-group">
@@ -270,30 +270,40 @@ export interface UserItem {
       align-items: center;
       justify-content: center;
       z-index: 1000;
+      padding: 20px;
     }
 
     .modal-card {
       width: 100%;
-      max-width: 440px;
+      max-width: 480px;
       padding: 32px;
       display: flex;
       flex-direction: column;
       gap: 20px;
+      box-sizing: border-box;
     }
 
     .modal-form {
       display: flex;
       flex-direction: column;
       gap: 16px;
+      width: 100%;
+      box-sizing: border-box;
     }
 
     .form-group {
       display: flex;
       flex-direction: column;
       gap: 6px;
+      width: 100%;
+      min-width: 0;
+      box-sizing: border-box;
     }
 
     .input-field {
+      width: 100%;
+      min-width: 0;
+      box-sizing: border-box;
       background: rgba(15, 23, 42, 0.8);
       border: 1px solid var(--border-neon);
       border-radius: 6px;
@@ -369,7 +379,6 @@ export class AdminUsersComponent implements OnInit {
         this.loadUsers();
       },
       error: (err) => {
-        // Exibir mensagem de erro tratada (Proteção do Último Admin)
         this.errorMessage.set(err.error?.message || 'Falha ao excluir usuário.');
       },
     });

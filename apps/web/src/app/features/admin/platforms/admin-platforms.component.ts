@@ -40,7 +40,7 @@ import { PlatformDetail } from '../../platforms-view/platforms-view.component';
 
           <h3 class="plat-name font-heading">{{ p.name }}</h3>
           <p class="plat-desc">{{ p.description || 'Sem descrição cadastrada.' }}</p>
-          <p class="plat-games">{{ p._count.games }} Jogo(s) Vinculado(s)</p>
+          <p class="plat-games">{{ p._count?.games ?? 0 }} Jogo(s) Vinculado(s)</p>
 
           <div class="card-actions">
             <button (click)="deletePlatform(p)" class="btn-action btn-danger">

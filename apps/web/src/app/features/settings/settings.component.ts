@@ -3,6 +3,7 @@ import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { HttpClient } from '@angular/common/http';
 import { AuthService } from '../../core/services/auth.service';
+import { GamepadService } from '../../core/services/gamepad.service';
 
 @Component({
   selector: 'app-settings',
@@ -11,8 +12,8 @@ import { AuthService } from '../../core/services/auth.service';
   template: `
     <div class="settings-page">
       <header class="page-header glass-panel">
-        <h1 class="header-title font-heading text-cyan-glow">⚙️ CONFIGURAÇÕES DE CONTA</h1>
-        <p class="header-subtitle">Gerencie suas informações de perfil, avatar e credenciais de acesso</p>
+        <h1 class="header-title font-heading text-cyan-glow">⚙️ CONFIGURAÇÕES DE CONTA & HARDWARE</h1>
+        <p class="header-subtitle">Gerencie suas informações de perfil, credenciais de acesso e status de periféricos (Gamepad API)</p>
       </header>
 
       <div class="settings-grid">
@@ -51,7 +52,7 @@ import { AuthService } from '../../core/services/auth.service';
 
         <!-- Card de Alteração de Senha com Argon2id -->
         <section class="settings-card glass-panel">
-          <h2 class="card-title font-heading">🔒 Seguranças e Senha</h2>
+          <h2 class="card-title font-heading">🔒 Segurança e Credenciais</h2>
 
           <form (ngSubmit)="changePassword()" class="settings-form">
             <div class="form-group">
@@ -75,6 +76,21 @@ import { AuthService } from '../../core/services/auth.service';
               <span>{{ isSavingPassword() ? 'Alterando...' : 'Alterar Senha de Acesso' }}</span>
             </button>
           </form>
+        </section>
+
+        <!-- Card de Status do Gamepad Hardware -->
+        <section class="settings-card glass-panel full-width">
+          <h2 class="card-title font-heading text-cyan-glow">🎮 Diagnóstico de Controles Físicos (Gamepad API)</h2>
+          <p class="card-desc">Conecte qualquer joystick USB ou Bluetooth (Xbox, PlayStation, Nintendo Switch Pro ou USB genérico) para testar a detecção em tempo real.</p>
+
+          <div class="gamepad-status-box" [class.connected]="gamepadService.connectedGamepadName()">
+            <div class="status-indicator font-pixel">
+              {{ gamepadService.connectedGamepadName() ? '🟢 CONTROLE CONECTADO' : '⚪ NENHUM CONTROLE DETECTADO' }}
+            </div>
+            <div class="device-name font-heading">
+              {{ gamepadService.connectedGamepadName() || 'Pressione qualquer botão no joystick USB/Bluetooth...' }}
+            </div>
+          </div>
         </section>
       </div>
     </div>
@@ -116,9 +132,18 @@ import { AuthService } from '../../core/services/auth.service';
       gap: 20px;
     }
 
+    .full-width {
+      grid-column: 1 / -1;
+    }
+
     .card-title {
       font-size: 18px;
       color: var(--text-bright);
+    }
+
+    .card-desc {
+      font-size: 13px;
+      color: var(--text-muted);
     }
 
     .settings-form {
@@ -159,6 +184,37 @@ import { AuthService } from '../../core/services/auth.service';
       border-color: var(--accent-cyan);
     }
 
+    .gamepad-status-box {
+      background: rgba(15, 23, 42, 0.8);
+      border: 1px dashed rgba(148, 163, 184, 0.3);
+      padding: 20px 24px;
+      border-radius: 10px;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      transition: all 0.3s ease;
+    }
+
+    .gamepad-status-box.connected {
+      border-style: solid;
+      border-color: var(--accent-cyan);
+      box-shadow: var(--glow-cyan);
+    }
+
+    .status-indicator {
+      font-size: 10px;
+      color: var(--text-muted);
+    }
+
+    .connected .status-indicator {
+      color: #10b981;
+    }
+
+    .device-name {
+      font-size: 16px;
+      color: var(--text-bright);
+    }
+
     .alert {
       padding: 10px;
       border-radius: 6px;
@@ -186,6 +242,7 @@ import { AuthService } from '../../core/services/auth.service';
 })
 export class SettingsComponent {
   protected authService = inject(AuthService);
+  protected gamepadService = inject(GamepadService);
   private http = inject(HttpClient);
 
   protected profileUsername = this.authService.currentUser()?.username || '';

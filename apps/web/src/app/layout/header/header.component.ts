@@ -165,13 +165,34 @@ export class HeaderComponent {
   getGamepadInfo(name: string | null): { icon: string; label: string } {
     if (!name) return { icon: '⚪', label: 'Sem Gamepad' };
     const lower = name.toLowerCase();
-    if (lower.includes('xbox')) return { icon: '🎮', label: 'Xbox' };
-    if (lower.includes('playstation') || lower.includes('dual') || lower.includes('ps5') || lower.includes('ps4') || lower.includes('ps3')) {
-      return { icon: '🎮', label: 'PlayStation' };
+
+    // 1. Sony PlayStation / DualSense (Vendor 054c ou DualSense/PS5/PS4/DualShock)
+    if (
+      lower.includes('dualsense') ||
+      lower.includes('playstation') ||
+      lower.includes('054c') ||
+      lower.includes('dualshock') ||
+      lower.includes('ps5') ||
+      lower.includes('ps4')
+    ) {
+      return { icon: '🎮', label: 'PlayStation DualSense' };
     }
-    if (lower.includes('nintendo') || lower.includes('switch') || lower.includes('pro controller')) {
+
+    // 2. Valve Steam Virtual Layer (Vendor 28de:11ff emulador de XInput Linux/Windows)
+    if (lower.includes('28de') || lower.includes('11ff') || lower.includes('steam')) {
+      return { icon: '🎮', label: 'DualSense / XInput (Steam)' };
+    }
+
+    // 3. Microsoft Xbox (Vendor 045e ou Xbox / X-Box / 360 / One)
+    if (lower.includes('xbox') || lower.includes('x-box') || lower.includes('045e') || lower.includes('360')) {
+      return { icon: '🎮', label: 'Xbox Controller' };
+    }
+
+    // 4. Nintendo Switch Pro / Joy-Con (Vendor 057e)
+    if (lower.includes('nintendo') || lower.includes('switch') || lower.includes('057e') || lower.includes('pro controller')) {
       return { icon: '🎮', label: 'Switch Pro' };
     }
-    return { icon: '🎮', label: 'Gamepad' };
+
+    return { icon: '🎮', label: 'Gamepad Genérico' };
   }
 }

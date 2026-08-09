@@ -2,6 +2,7 @@ import { Injectable, ConflictException, UnauthorizedException, BadRequestExcepti
 import { JwtService } from '@nestjs/jwt';
 import * as argon2 from 'argon2';
 import { PrismaService } from '../database/prisma.service';
+import { MailService } from '../mail/mail.service';
 import { RegisterDto } from './dto/register.dto';
 import { LoginDto } from './dto/login.dto';
 import { UserRole } from '@prisma/client';
@@ -11,6 +12,7 @@ export class AuthService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly jwtService: JwtService,
+    private readonly mailService: MailService,
   ) {}
 
   async register(dto: RegisterDto) {
@@ -69,24 +71,24 @@ export class AuthService {
       where: { email: dto.email },
     });
 
-    // 10. Mensagem padronizada contra enunciação de usuários
+    // Mensagem padronizada contra enunciação de usuários
     if (!user) {
       throw new UnauthorizedException('Usuário ou senha incorretos.');
     }
 
-    // 8. Mensageria detalhada para conta bloqueada por Admin
+    // Mensageria detalhada para conta bloqueada por Admin
     if (user.isBlocked) {
       throw new ForbiddenException('Esta conta de usuário foi bloqueada por um Administrador. Entre em contato com o suporte.');
     }
 
-    // 3. Verificar hash da senha com Argon2id
+    // Verificar hash da senha com Argon2id
     const isPasswordValid = await argon2.verify(user.passwordHash, dto.password);
 
     if (!isPasswordValid) {
       throw new UnauthorizedException('Usuário ou senha incorretos.');
     }
 
-    // 7. Gerar tokens JWT com sessão de 8 horas de expiração
+    // Gerar tokens JWT com sessão de 8 horas de expiração
     const tokens = await this.generateTokens(user.id, user.email, user.role);
 
     const { passwordHash: _, ...safeUser } = user;
@@ -126,10 +128,10 @@ export class AuthService {
   async forgotPassword(email: string) {
     const user = await this.prisma.user.findUnique({ where: { email } });
 
-    // Mensagem genérica segura padronizada (Item 10)
+    // Mensagem genérica segura padronizada anti-enumeração
     if (!user || user.isBlocked) {
       return {
-        message: 'Se o e-mail informado estiver ativo, um token de recuperação foi gerado com sucesso.',
+        message: 'Se o e-mail informado estiver ativo, enviamos um link seguro de redefinição de senha para sua caixa de entrada.',
       };
     }
 
@@ -138,8 +140,13 @@ export class AuthService {
       { expiresIn: '15m' },
     );
 
+    // Disparar e-mail em background através do Robô MailService
+    await this.mailService.sendPasswordResetEmail(user.email, resetToken).catch((err) => {
+      console.error('[AuthService] Falha ao enviar e-mail de redefinição:', err);
+    });
+
     return {
-      message: 'Se o e-mail informado estiver ativo, um token de recuperação foi gerado com sucesso.',
+      message: 'Se o e-mail informado estiver ativo, enviamos um link seguro de redefinição de senha para sua caixa de entrada.',
       resetToken,
     };
   }

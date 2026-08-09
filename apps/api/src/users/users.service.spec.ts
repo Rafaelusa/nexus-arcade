@@ -2,6 +2,7 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { UsersService } from './users.service';
 import { PrismaService } from '../database/prisma.service';
 import { AuditService } from '../audit/audit.service';
+import { MailService } from '../mail/mail.service';
 import { BadRequestException, NotFoundException, UnauthorizedException } from '@nestjs/common';
 import { UserRole } from '@prisma/client';
 import * as argon2 from 'argon2';
@@ -27,12 +28,18 @@ describe('UsersService', () => {
     logAction: jest.fn().mockResolvedValue({ id: 'audit-log-id' }),
   };
 
+  const mockMailService = {
+    sendPasswordResetEmail: jest.fn().mockResolvedValue(undefined),
+    sendAccountStatusNotification: jest.fn().mockResolvedValue(undefined),
+  };
+
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         UsersService,
         { provide: PrismaService, useValue: mockPrismaService },
         { provide: AuditService, useValue: mockAuditService },
+        { provide: MailService, useValue: mockMailService },
       ],
     }).compile();
 
@@ -54,7 +61,7 @@ describe('UsersService', () => {
         email: 'admin@nexus.local',
         role: UserRole.ADMIN,
       });
-      mockPrismaService.user.count.mockResolvedValue(1); // Apenas 1 Admin
+      mockPrismaService.user.count.mockResolvedValue(1);
 
       await expect(service.delete('admin-1', 'admin-1')).rejects.toThrow(BadRequestException);
     });
@@ -66,7 +73,7 @@ describe('UsersService', () => {
         username: 'admin2',
         role: UserRole.ADMIN,
       });
-      mockPrismaService.user.count.mockResolvedValue(2); // 2 Admins
+      mockPrismaService.user.count.mockResolvedValue(2);
       mockPrismaService.user.delete.mockResolvedValue({});
 
       const result = await service.delete('admin-2', 'admin-1');
@@ -89,7 +96,7 @@ describe('UsersService', () => {
         role: UserRole.ADMIN,
         isBlocked: false,
       });
-      mockPrismaService.user.count.mockResolvedValue(1); // 1 Admin ativo
+      mockPrismaService.user.count.mockResolvedValue(1);
 
       await expect(service.toggleBlock('admin-1', 'admin-1')).rejects.toThrow(BadRequestException);
     });

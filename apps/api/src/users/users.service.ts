@@ -8,6 +8,7 @@ import {
 import * as argon2 from 'argon2';
 import { PrismaService } from '../database/prisma.service';
 import { AuditService } from '../audit/audit.service';
+import { MailService } from '../mail/mail.service';
 import { CreateUserDto } from './dto/create-user.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
 import { UpdateProfileDto } from './dto/update-profile.dto';
@@ -19,6 +20,7 @@ export class UsersService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly auditService: AuditService,
+    private readonly mailService: MailService,
   ) {}
 
   async findAll(
@@ -153,7 +155,6 @@ export class UsersService {
       throw new NotFoundException(`Usuário com ID "${id}" não foi encontrado.`);
     }
 
-    // Regra do Último Admin: Se estiver mudando role de ADMIN para GAMER
     if (targetUser.role === UserRole.ADMIN && dto.role === UserRole.GAMER) {
       const activeAdminCount = await this.prisma.user.count({
         where: { role: UserRole.ADMIN, isBlocked: false },
@@ -195,7 +196,6 @@ export class UsersService {
       throw new NotFoundException(`Usuário com ID "${id}" não foi encontrado.`);
     }
 
-    // Se estiver tentando BLOQUEAR um ADMIN, checar se é o único Admin ativo
     if (!targetUser.isBlocked && targetUser.role === UserRole.ADMIN) {
       const activeAdminCount = await this.prisma.user.count({
         where: { role: UserRole.ADMIN, isBlocked: false },
@@ -223,6 +223,11 @@ export class UsersService {
       isBlocked: newBlockState,
     });
 
+    // Disparar e-mail de notificação de alteração de status em background
+    await this.mailService.sendAccountStatusNotification(user.email, user.username, newBlockState).catch((err) => {
+      console.error('[UsersService] Erro ao enviar e-mail de notificação de status:', err);
+    });
+
     return user;
   }
 
@@ -232,7 +237,6 @@ export class UsersService {
       throw new NotFoundException(`Usuário com ID "${id}" não foi encontrado.`);
     }
 
-    // Regra do Último Admin: Impedir exclusão se for ADMIN e for o único Admin existente
     if (targetUser.role === UserRole.ADMIN) {
       const adminCount = await this.prisma.user.count({
         where: { role: UserRole.ADMIN },

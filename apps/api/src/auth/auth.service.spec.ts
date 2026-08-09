@@ -2,6 +2,7 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { JwtService } from '@nestjs/jwt';
 import { AuthService } from './auth.service';
 import { PrismaService } from '../database/prisma.service';
+import { MailService } from '../mail/mail.service';
 import { ConflictException, UnauthorizedException, ForbiddenException, BadRequestException } from '@nestjs/common';
 import * as argon2 from 'argon2';
 
@@ -24,12 +25,18 @@ describe('AuthService', () => {
     verifyAsync: jest.fn(),
   };
 
+  const mockMailService = {
+    sendPasswordResetEmail: jest.fn().mockResolvedValue(undefined),
+    sendAccountStatusNotification: jest.fn().mockResolvedValue(undefined),
+  };
+
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         AuthService,
         { provide: PrismaService, useValue: mockPrismaService },
         { provide: JwtService, useValue: mockJwtService },
+        { provide: MailService, useValue: mockMailService },
       ],
     }).compile();
 

@@ -116,7 +116,8 @@ O projeto possui **8 tabelas relacionais** modeladas e migradas automaticamente:
 ### Infraestrutura & Qualidade
 - **Containers**: Docker & Docker Compose
 - **Workspaces**: `npm workspaces` Monorepo
-- **Testes**: Jest / Vitest & Supertest
+- **CI/CD Pipeline**: GitHub Actions (`.github/workflows/ci.yml`)
+- **Testes**: Jest (22 Testes Unitários Automatizados no Backend com 100% de Aprovação)
 
 ---
 
@@ -124,9 +125,12 @@ O projeto possui **8 tabelas relacionais** modeladas e migradas automaticamente:
 
 ```text
 nexus-arcade/
+├── .github/
+│   └── workflows/
+│       └── ci.yml               # Pipeline de CI/CD GitHub Actions
 ├── apps/
 │   ├── web/                     # Frontend Angular 21 (Library, Admin Dashboards, WebAssembly Player, Gamepad API)
-│   └── api/                     # Backend NestJS API (Auth, Users, Platforms, Games, Storage, Saves Cloud Sync)
+│   └── api/                     # Backend NestJS API (Auth, Users, Platforms, Games, Storage, Saves, Stats)
 ├── packages/
 │   └── shared-types/            # Tipos e DTOs compartilhados
 ├── database/
@@ -142,14 +146,14 @@ nexus-arcade/
 │   ├── migrate.js               # Executa Prisma Migrations
 │   └── seed.js                  # Executa os seeds idempotentes
 ├── docs/                        # Documentação técnica e Critérios de Aceite
-│   └── acceptance-criteria/     # Relatórios por Sprint
+│   └── acceptance-criteria/     # Relatórios por Sprint (Sprints 1 a 10)
 ├── docker-compose.yml           # Serviço PostgreSQL 16
 └── package.json                 # Workspaces & Scripts Raiz
 ```
 
 ---
 
-## 🚀 Progresso das Sprints
+## 🚀 Progresso das Sprints (100% Concluído - Release v1.0.0)
 
 - 🟢 **[Sprint 1](file:///home/rafael-dev/Projetos%20Pessoais/nexus-arcade/docs/acceptance-criteria/sprint-1.md)**: Monorepo Foundation & One-Command Bootstrap (`v0.1.0-sprint1`) — **Concluído**
 - 🟢 **[Sprint 2](file:///home/rafael-dev/Projetos%20Pessoais/nexus-arcade/docs/acceptance-criteria/sprint-2.md)**: Database Layer (PostgreSQL, Prisma ORM, Migrations & Seeds) (`v0.2.0-sprint2`) — **Concluído**
@@ -160,7 +164,7 @@ nexus-arcade/
 - 🟢 **[Sprint 7](file:///home/rafael-dev/Projetos%20Pessoais/nexus-arcade/docs/acceptance-criteria/sprint-7.md)**: Frontend Library & Admin Dashboards (Management UI) (`v0.7.0-sprint7`) — **Concluído**
 - 🟢 **[Sprint 8](file:///home/rafael-dev/Projetos%20Pessoais/nexus-arcade/docs/acceptance-criteria/sprint-8.md)**: WebAssembly Emulator Engine (EmulatorJS & ROM Player) (`v0.8.0-sprint8`) — **Concluído**
 - 🟢 **[Sprint 9](file:///home/rafael-dev/Projetos%20Pessoais/nexus-arcade/docs/acceptance-criteria/sprint-9.md)**: Gamepad API Integration & Save States (Local + Cloud Sync) (`v0.9.0-sprint9`) — **Concluído**
-- 🟡 **Sprint 10**: Gamer Statistics Dashboard, Testing Suite & CI/CD Pipeline — **Em andamento**
+- 🟢 **[Sprint 10](file:///home/rafael-dev/Projetos%20Pessoais/nexus-arcade/docs/acceptance-criteria/sprint-10.md)**: Gamer Statistics Dashboard, Testing Suite & CI/CD Pipeline (`v1.0.0-sprint10`) — **Concluído (RELEASE v1.0.0)**
 
 ---
 

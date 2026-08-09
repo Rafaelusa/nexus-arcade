@@ -1,0 +1,31 @@
+# Node modules
+node_modules/
+
+# Build outputs
+dist/
+build/
+.angular/
+
+# Environment files
+.env
+.env.local
+!.env.example
+
+# Database data
+database/data/
+
+# Storage
+storage/roms/*
+!storage/roms/.gitkeep
+storage/covers/*
+!storage/covers/.gitkeep
+
+# System & IDE files
+.DS_Store
+.vscode/*
+!.vscode/extensions.json
+.idea/
+
+# Logs
+*.log
+npm-debug.log*

@@ -1,0 +1,25 @@
+{
+  "name": "nexus-arcade",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Plataforma web Full Stack para gerenciamento, organização e execução de jogos clássicos.",
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
+  "scripts": {
+    "start": "node scripts/start.js",
+    "dev": "node scripts/start.js",
+    "stop": "docker compose down",
+    "restart": "npm run stop && npm run start",
+    "db:up": "docker compose up -d postgres",
+    "db:down": "docker compose down",
+    "test": "npm run test --workspaces",
+    "lint": "npm run lint --workspaces",
+    "build": "npm run build --workspaces"
+  },
+  "devDependencies": {
+    "concurrently": "^8.2.2",
+    "dotenv": "^16.4.5"
+  }
+}

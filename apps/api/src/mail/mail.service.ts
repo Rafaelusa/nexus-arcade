@@ -1,5 +1,7 @@
 import { Injectable, Logger } from '@nestjs/common';
 import * as nodemailer from 'nodemailer';
+import * as fs from 'fs';
+import * as path from 'path';
 
 @Injectable()
 export class MailService {
@@ -11,20 +13,54 @@ export class MailService {
     this.initTransporter();
   }
 
+  private getEnvCredentials() {
+    let host = process.env.SMTP_HOST?.trim();
+    let user = process.env.SMTP_USER?.trim();
+    let pass = process.env.SMTP_PASS?.trim();
+    let port = Number(process.env.SMTP_PORT) || 587;
+    let secure = process.env.SMTP_SECURE === 'true';
+    let from = process.env.SMTP_FROM?.trim();
+
+    // Se as variáveis de ambiente não foram carregadas no arranque do processo, lê diretamente do arquivo .env
+    if (!host || !user || !pass) {
+      try {
+        const rootEnv = path.resolve(process.cwd(), '.env');
+        const rootEnv2 = path.resolve(process.cwd(), '../../.env');
+        const targetPath = fs.existsSync(rootEnv) ? rootEnv : fs.existsSync(rootEnv2) ? rootEnv2 : null;
+
+        if (targetPath) {
+          const content = fs.readFileSync(targetPath, 'utf8');
+          const lines = content.split('\n');
+          for (const line of lines) {
+            const trimmed = line.trim();
+            if (trimmed.startsWith('SMTP_HOST=')) host = trimmed.substring(10).trim();
+            if (trimmed.startsWith('SMTP_USER=')) user = trimmed.substring(10).trim();
+            if (trimmed.startsWith('SMTP_PASS=')) pass = trimmed.substring(10).trim();
+            if (trimmed.startsWith('SMTP_PORT=')) port = Number(trimmed.substring(10).trim()) || 587;
+            if (trimmed.startsWith('SMTP_SECURE=')) secure = trimmed.substring(12).trim() === 'true';
+            if (trimmed.startsWith('SMTP_FROM=')) from = trimmed.substring(10).trim().replace(/^"|"$/g, '');
+          }
+        }
+      } catch (err) {
+        this.logger.error(`[MailService] Erro ao ler .env do disco: ${err.message}`);
+      }
+    }
+
+    return { host, user, pass, port, secure, from };
+  }
+
   private async initTransporter() {
-    const host = process.env.SMTP_HOST;
-    const user = process.env.SMTP_USER;
-    const pass = process.env.SMTP_PASS;
+    const { host, user, pass, port, secure } = this.getEnvCredentials();
 
     if (host && user && pass) {
       this.isRealSmtpConfigured = true;
       this.transporter = nodemailer.createTransport({
         host,
-        port: Number(process.env.SMTP_PORT) || 587,
-        secure: process.env.SMTP_SECURE === 'true',
+        port,
+        secure,
         auth: { user, pass },
       });
-      this.logger.log(`[MailService] Robô SMTP REAL configurado para servidor ${host} (Usuário: ${user}).`);
+      this.logger.log(`[MailService] Robô SMTP REAL ativado com sucesso para ${host} (Usuário: ${user}).`);
     } else {
       this.isRealSmtpConfigured = false;
       const testAccount = await nodemailer.createTestAccount().catch(() => null);
@@ -35,45 +71,51 @@ export class MailService {
           secure: testAccount.smtp.secure,
           auth: { user: testAccount.user, pass: testAccount.pass },
         });
-        this.logger.log(`[MailService] Modo Sandbox Ethereal Ativo. E-mails de teste serão capturados e os links exibidos nos logs.`);
+        this.logger.log(`[MailService] Modo Sandbox Ethereal Ativo. E-mails de teste serão exibidos nos logs.`);
       }
     }
   }
 
   async sendPasswordResetEmail(email: string, resetToken: string): Promise<{ sentRealEmail: boolean; previewUrl?: string }> {
-    if (!this.transporter) {
+    // Tenta re-inicializar o transportador caso o .env tenha sido preenchido agora
+    const creds = this.getEnvCredentials();
+    if (creds.host && creds.user && creds.pass && !this.isRealSmtpConfigured) {
       await this.initTransporter();
     }
 
     const resetUrl = `http://localhost:4200/reset-password?token=${resetToken}`;
-    const fromAddress = process.env.SMTP_FROM || '"Nexus Arcade Security" <no-reply@nexusarcade.com>';
+    const fromAddress = creds.from || `"Nexus Arcade Security" <no-reply@nexusarcade.com>`;
 
     const htmlContent = `
-      <div style="font-family: Arial, sans-serif; background-color: #0f172a; color: #f8fafc; padding: 32px; border-radius: 12px;">
+      <div style="font-family: Arial, sans-serif; background-color: #0f172a; color: #f8fafc; padding: 32px; border-radius: 12px; max-width: 580px; margin: 0 auto; border: 1px solid #00f0ff;">
         <h1 style="color: #00f0ff; margin-bottom: 8px;">🎮 NEXUS ARCADE</h1>
         <h2 style="color: #ff007f;">Solicitação de Redefinição de Senha</h2>
-        <p style="font-size: 15px; color: #94a3b8;">
+        <p style="font-size: 15px; color: #94a3b8; line-height: 1.5;">
           Recebemos uma solicitação para redefinir a senha da sua conta vinculada ao e-mail <strong>${email}</strong>.
         </p>
-        <p style="margin-top: 24px;">
+        <p style="margin-top: 24px; color: #f8fafc;">
           Clique no botão abaixo para redefinir sua senha com segurança (Link válido por 15 minutos):
         </p>
-        <div style="margin: 32px 0;">
+        <div style="margin: 32px 0; text-align: center;">
           <a href="${resetUrl}" target="_blank" style="background: linear-gradient(135deg, #00f0ff, #7000ff); color: #000; font-weight: bold; padding: 14px 28px; text-decoration: none; border-radius: 8px; font-size: 16px; display: inline-block;">
             🔒 REDEFINIR SENHA AGORA
           </a>
         </div>
         <p style="font-size: 12px; color: #64748b;">
-          Se você não solicitou a redefinição de senha, ignore este e-mail. Nenhuma alteração foi realizada.
+          Se você não solicitou a redefinição de senha, ignore este e-mail. Nenhuma alteração foi realizada na sua conta.
         </p>
         <hr style="border: 0; border-top: 1px solid #334155; margin-top: 32px;" />
         <p style="font-size: 11px; color: #64748b; text-align: center;">
-          Nexus Arcade — Plataforma de Emulação Retro Cloud High Performance
+          Nexus Arcade — Plataforma de Emulação Retro Cloud High Performance | Dev Rafael Ribeiro
         </p>
       </div>
     `;
 
     try {
+      if (!this.transporter) {
+        await this.initTransporter();
+      }
+
       if (!this.transporter) {
         return { sentRealEmail: false };
       }
@@ -87,7 +129,7 @@ export class MailService {
 
       const previewUrl = nodemailer.getTestMessageUrl(info) || undefined;
 
-      this.logger.log(`[MailService] E-mail de redefinição processado para ${email}. MessageId: ${info.messageId}`);
+      this.logger.log(`[MailService] E-mail enviado com SUCESSO para ${email}. MessageId: ${info.messageId}`);
       if (previewUrl) {
         this.logger.log(`[MailService] 🔗 Link de visualização do e-mail (Ethereal Sandbox): ${previewUrl}`);
       }
@@ -103,16 +145,21 @@ export class MailService {
   }
 
   async sendAccountStatusNotification(email: string, username: string, isBlocked: boolean): Promise<void> {
+    const creds = this.getEnvCredentials();
+    if (creds.host && creds.user && creds.pass && !this.isRealSmtpConfigured) {
+      await this.initTransporter();
+    }
+
     if (!this.transporter) {
       await this.initTransporter();
     }
 
     const statusText = isBlocked ? 'BLOQUEADA' : 'DESBLOQUEADA / ATIVADA';
     const statusColor = isBlocked ? '#ef4444' : '#10b981';
-    const fromAddress = process.env.SMTP_FROM || '"Nexus Arcade Support" <support@nexusarcade.com>';
+    const fromAddress = creds.from || `"Nexus Arcade Support" <support@nexusarcade.com>`;
 
     const htmlContent = `
-      <div style="font-family: Arial, sans-serif; background-color: #0f172a; color: #f8fafc; padding: 32px; border-radius: 12px;">
+      <div style="font-family: Arial, sans-serif; background-color: #0f172a; color: #f8fafc; padding: 32px; border-radius: 12px; max-width: 580px; margin: 0 auto; border: 1px solid #00f0ff;">
         <h1 style="color: #00f0ff; margin-bottom: 8px;">🎮 NEXUS ARCADE</h1>
         <h2>Notificação de Status da Conta</h2>
         <p style="font-size: 15px; color: #94a3b8;">

@@ -321,15 +321,17 @@ export interface AdminGameItem {
       align-items: center;
       justify-content: center;
       z-index: 1000;
+      padding: 20px;
     }
 
     .modal-card {
       width: 100%;
-      max-width: 480px;
+      max-width: 520px;
       padding: 32px;
       display: flex;
       flex-direction: column;
       gap: 20px;
+      box-sizing: border-box;
     }
 
     .modal-sub {
@@ -341,21 +343,31 @@ export interface AdminGameItem {
       display: flex;
       flex-direction: column;
       gap: 16px;
+      width: 100%;
+      box-sizing: border-box;
     }
 
     .form-group {
       display: flex;
       flex-direction: column;
       gap: 6px;
+      width: 100%;
+      min-width: 0;
+      box-sizing: border-box;
     }
 
     .form-row {
       display: grid;
       grid-template-columns: 1fr 1fr;
-      gap: 12px;
+      gap: 16px;
+      width: 100%;
+      box-sizing: border-box;
     }
 
     .input-field {
+      width: 100%;
+      min-width: 0;
+      box-sizing: border-box;
       background: rgba(15, 23, 42, 0.8);
       border: 1px solid var(--border-neon);
       border-radius: 6px;
